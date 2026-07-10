@@ -1,0 +1,129 @@
+---
+// =============================================================
+// components/Schedule.astro
+// Section "Jadwal Kompetisi" — timeline vertikal modern dari Supabase
+// =============================================================
+import { supabase } from '../lib/supabase';
+
+const { data: jadwalList } = await supabase
+  .from('jadwal_kompetisi')
+  .select('*')
+  .order('tanggal', { ascending: true });
+
+const schedules = (jadwalList ?? []).map((item) => ({
+  date: new Date(item.tanggal).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }),
+  title: item.judul,
+  desc: item.deskripsi,
+}));
+---
+
+<section class="schedule section" id="jadwal">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">Jadwal Kompetisi</span>
+      <h2 class="section-title">Rangkaian Kegiatan KKA 2026</h2>
+      <p class="section-subtitle mx-auto">
+        Catat tanggal penting berikut agar tidak ketinggalan setiap tahapan kompetisi.
+      </p>
+    </div>
+
+    {schedules.length === 0 ? (
+      <p class="schedule__empty">Jadwal belum tersedia.</p>
+    ) : (
+      <div class="schedule__timeline">
+        {schedules.map((item, i) => (
+          <div class:list={['schedule__item', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
+            <div class="schedule__dot"></div>
+            <div class="schedule__card card">
+              <span class="schedule__date">{item.date}</span>
+              <h3 class="schedule__title">{item.title}</h3>
+              {item.desc && <p class="schedule__desc">{item.desc}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
+
+<style>
+  .schedule__timeline {
+    position: relative;
+    max-width: 760px;
+    margin-inline: auto;
+    padding-left: 40px;
+  }
+
+  .schedule__empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 40px 0;
+  }
+
+  .schedule__timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--color-border);
+  }
+
+  .schedule__item {
+    position: relative;
+    margin-bottom: 32px;
+  }
+
+  .schedule__item:last-child {
+    margin-bottom: 0;
+  }
+
+  .schedule__dot {
+    position: absolute;
+    left: -40px;
+    top: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-white);
+    border: 3px solid var(--color-secondary);
+  }
+
+  .schedule__card {
+    padding: 22px 26px;
+  }
+
+  .schedule__date {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .schedule__title {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+
+  .schedule__desc {
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 560px) {
+    .schedule__timeline {
+      padding-left: 30px;
+    }
+    .schedule__dot {
+      left: -30px;
+    }
+  }
+</style>

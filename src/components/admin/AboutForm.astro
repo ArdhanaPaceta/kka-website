@@ -1,0 +1,640 @@
+---
+import { supabase } from '../../lib/supabase';
+
+let items = [];
+let fetchError = null;
+
+try {
+  const { data, error } = await supabase
+    .from('keunggulan')
+    .select('*')
+    .order('urutan', { ascending: true });
+  if (error) throw error;
+  items = data || [];
+} catch (err) {
+  fetchError = err.message;
+  console.error('Gagal fetch keunggulan:', err);
+}
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola About (Keunggulan)</h2>
+      <p class="form-hint">Atur kartu keunggulan yang tampil di section "Tentang Kompetisi".</p>
+    </div>
+    <button type="button" id="btnTambah" class="btn-primary btn-add">
+      <span class="plus-icon">+</span> Tambah Keunggulan
+    </button>
+  </div>
+
+  {fetchError && (
+    <div class="error-banner">
+      <p><strong>Gagal memuat data:</strong> {fetchError}</p>
+      <p class="error-hint">Pastikan tabel "keunggulan" ada dan RLS mengizinkan SELECT.</p>
+    </div>
+  )}
+
+  <!-- LIST ITEMS -->
+  <div id="itemList" class="menu-list">
+    {items.length === 0 ? (
+      <div class="empty-state">
+        <p>Belum ada data keunggulan.</p>
+        <span class="empty-sub">Klik tombol "Tambah Keunggulan" untuk mulai.</span>
+      </div>
+    ) : (
+      items.map((item) => (
+        <div class="menu-item" data-id={item.id}>
+          <div class="menu-item__info">
+            <div class="item-header">
+              <strong>{item.judul}</strong>
+              <span class="badge-urutan">Urutan #{item.urutan}</span>
+            </div>
+            <p class="item-desc">{item.deskripsi}</p>
+            {item.gambar_url && (
+              <span class="item-gambar">🖼️ {item.gambar_url}</span>
+            )}
+          </div>
+          <div class="menu-item__actions">
+            <button
+              type="button"
+              class="btn-edit"
+              data-id={item.id}
+              data-judul={item.judul}
+              data-deskripsi={item.deskripsi}
+              data-gambar={item.gambar_url}
+              data-urutan={item.urutan}
+            >✏️ Edit</button>
+            <button type="button" class="btn-delete" data-id={item.id}>🗑️ Hapus</button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  <!-- FORM TAMBAH/EDIT -->
+  <div id="itemForm" class="item-form hidden">
+    <hr class="form-divider" />
+    <h3 id="formTitle">Tambah Keunggulan</h3>
+    <input type="hidden" id="itemId" />
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="judul">Judul <span class="required">*</span></label>
+        <input type="text" id="judul" name="judul" placeholder="Contoh: Kompetisi Adil" required />
+      </div>
+
+      <div class="field">
+        <label for="urutan">Urutan Tampil <span class="required">*</span></label>
+        <input type="number" id="urutan" name="urutan" value="1" required />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="deskripsi">Deskripsi <span class="required">*</span></label>
+      <textarea id="deskripsi" name="deskripsi" rows="3" placeholder="Tulis deskripsi keunggulan di sini..." required></textarea>
+    </div>
+
+    <div class="field">
+      <label for="gambar_url">URL Gambar / Icon</label>
+      <input type="text" id="gambar_url" name="gambar_url" placeholder="contoh: /images/icon1.png" />
+      <small class="field-hint">Kosongkan jika tidak ada gambar (akan tampil icon default).</small>
+    </div>
+
+    <div id="itemStatus" class="status-text"></div>
+
+    <div class="form-actions">
+      <button type="button" id="btnBatal" class="btn-outline">Batal</button>
+      <button type="submit" id="btnSubmit" class="btn-primary">
+        <span class="btn-text">Simpan Data</span>
+        <span class="btn-loading" style="display:none;">Menyimpan...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  // DOM Elements
+  const btnTambah = document.getElementById('btnTambah');
+  const itemForm = document.getElementById('itemForm');
+  const btnBatal = document.getElementById('btnBatal');
+  const btnSubmit = document.getElementById('btnSubmit');
+  const formTitle = document.getElementById('formTitle');
+  const itemId = document.getElementById('itemId');
+  const statusEl = document.getElementById('itemStatus');
+
+  const submitText = btnSubmit.querySelector('.btn-text');
+  const submitLoading = btnSubmit.querySelector('.btn-loading');
+
+  // Fungsi reset form
+  function resetForm() {
+    itemForm.reset();
+    itemId.value = '';
+    formTitle.textContent = 'Tambah Keunggulan';
+    document.getElementById('urutan').value = 1;
+    statusEl.textContent = '';
+    statusEl.className = 'status-text';
+    submitText.style.display = 'inline';
+    submitLoading.style.display = 'none';
+    btnSubmit.disabled = false;
+  }
+
+  // Fungsi set status
+  function setStatus(msg, type) {
+    statusEl.textContent = msg;
+    statusEl.className = 'status-text';
+    if (type === 'error') {
+      statusEl.style.color = '#dc2626';
+      statusEl.classList.add('status-error');
+    } else if (type === 'success') {
+      statusEl.style.color = '#16a34a';
+      statusEl.classList.add('status-success');
+    } else if (type === 'loading') {
+      statusEl.style.color = '#2563eb';
+      statusEl.classList.add('status-loading');
+    }
+  }
+
+  // --- Toggle Form (Tambah) ---
+  btnTambah.addEventListener('click', () => {
+    resetForm();
+    itemForm.classList.remove('hidden');
+    itemForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('judul').focus();
+  });
+
+  // --- Batal ---
+  btnBatal.addEventListener('click', () => {
+    itemForm.classList.add('hidden');
+    resetForm();
+  });
+
+  // --- Edit ---
+  document.querySelectorAll('.btn-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      itemId.value = btn.dataset.id;
+      document.getElementById('judul').value = btn.dataset.judul;
+      document.getElementById('deskripsi').value = btn.dataset.deskripsi;
+      document.getElementById('gambar_url').value = btn.dataset.gambar || '';
+      document.getElementById('urutan').value = btn.dataset.urutan;
+      formTitle.textContent = 'Edit Keunggulan';
+      itemForm.classList.remove('hidden');
+      itemForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('judul').focus();
+    });
+  });
+
+  // --- Delete ---
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const judul = btn.closest('.menu-item').querySelector('strong').textContent;
+      
+      if (!confirm(`Yakin ingin menghapus keunggulan "${judul}"?`)) return;
+
+      const id = btn.dataset.id;
+      const originalText = btn.textContent;
+      btn.textContent = 'Menghapus...';
+      btn.disabled = true;
+
+      try {
+        const { error } = await supabase
+          .from('keunggulan')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        window.location.reload();
+      } catch (err) {
+        alert('Gagal menghapus: ' + err.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // --- Submit (Create / Update) ---
+  itemForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const judul = document.getElementById('judul').value.trim();
+    const deskripsi = document.getElementById('deskripsi').value.trim();
+    const gambar_url = document.getElementById('gambar_url').value.trim() || null;
+    const urutan = parseInt(document.getElementById('urutan').value, 10);
+
+    // Validasi
+    if (!judul) {
+      setStatus('Judul wajib diisi.', 'error');
+      document.getElementById('judul').focus();
+      return;
+    }
+    if (!deskripsi) {
+      setStatus('Deskripsi wajib diisi.', 'error');
+      document.getElementById('deskripsi').focus();
+      return;
+    }
+    if (isNaN(urutan) || urutan < 1) {
+      setStatus('Urutan harus angka positif.', 'error');
+      document.getElementById('urutan').focus();
+      return;
+    }
+
+    setStatus('Menyimpan...', 'loading');
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'inline';
+    btnSubmit.disabled = true;
+
+    const payload = { judul, deskripsi, gambar_url, urutan };
+    let error;
+
+    try {
+      if (itemId.value) {
+        ({ error } = await supabase
+          .from('keunggulan')
+          .update(payload)
+          .eq('id', itemId.value));
+      } else {
+        ({ error } = await supabase
+          .from('keunggulan')
+          .insert(payload));
+      }
+
+      if (error) throw error;
+
+      setStatus('Tersimpan! Halaman akan dimuat ulang...', 'success');
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      setStatus('Gagal menyimpan: ' + err.message, 'error');
+      submitText.style.display = 'inline';
+      submitLoading.style.display = 'none';
+      btnSubmit.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  /* CARD */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .error-banner {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .error-banner p {
+    margin: 0;
+    color: #b91c1c;
+  }
+  .error-hint {
+    font-size: 0.85rem;
+    color: #991b1b !important;
+    margin-top: 0.25rem !important;
+  }
+
+  /* BUTTONS */
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .btn-add .plus-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #d1d9e6;
+    color: #475569;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-outline:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  /* LIST */
+  .menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1.25rem 0 1.5rem 0;
+  }
+
+  .menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0.9rem 1rem;
+    background: #fafcff;
+    border-radius: 10px;
+    border: 1px solid #eef2f6;
+    transition: border-color 0.2s, background 0.2s;
+    gap: 0.75rem;
+  }
+  .menu-item:hover {
+    background: #f8fafc;
+    border-color: #d9e2ef;
+  }
+
+  .menu-item__info {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .item-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 0.2rem;
+  }
+  .item-header strong {
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  .badge-urutan {
+    background: #eef2ff;
+    color: #2563eb;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.7rem;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  .item-desc {
+    color: #475569;
+    font-size: 0.9rem;
+    margin: 0.15rem 0 0 0;
+    line-height: 1.4;
+  }
+
+  .item-gambar {
+    display: inline-block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 0.1rem 0.6rem;
+    border-radius: 4px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .menu-item__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: transparent;
+  }
+
+  .btn-edit {
+    color: #2563eb;
+    background: #eff6ff;
+  }
+  .btn-edit:hover {
+    background: #dbeafe;
+  }
+
+  .btn-delete {
+    color: #dc2626;
+    background: #fef2f2;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+  .btn-delete:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 0.25rem 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* FORM TOGGLE */
+  .item-form {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    animation: slideDown 0.3s ease forwards;
+  }
+  .item-form.hidden {
+    display: none;
+  }
+
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 0.5rem 0 1.25rem 0;
+  }
+
+  .item-form h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 1.25rem 0;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field .required {
+    color: #dc2626;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .field-hint {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+  }
+
+  /* STATUS */
+  .status-text {
+    margin: 0.75rem 0 0.5rem 0;
+    font-weight: 500;
+    min-height: 1.8rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+  }
+  .status-text.status-error {
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+  .status-text.status-success {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .status-text.status-loading {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  /* FORM ACTIONS */
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-add {
+      justify-content: center;
+      width: 100%;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .menu-item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .menu-item__actions {
+      justify-content: flex-end;
+    }
+    .item-gambar {
+      max-width: 100%;
+    }
+  }
+</style>

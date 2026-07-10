@@ -1,0 +1,537 @@
+---
+import { supabase } from '../../lib/supabase';
+
+const { data: jadwalList } = await supabase
+  .from('jadwal_kompetisi')
+  .select('*')
+  .order('tanggal', { ascending: true });
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola Jadwal</h2>
+      <p class="form-hint">Atur rangkaian jadwal kegiatan kompetisi yang tampil di halaman publik.</p>
+    </div>
+    <button type="button" id="btnTambahJadwal" class="btn-primary btn-add">
+      <span class="plus-icon">+</span> Tambah Jadwal
+    </button>
+  </div>
+
+  <!-- LIST JADWAL -->
+  <div id="jadwalListEl" class="jadwal-list">
+    {(jadwalList ?? []).length === 0 ? (
+      <div class="empty-state">
+        <span class="empty-icon">📅</span>
+        <p>Belum ada jadwal.</p>
+        <span class="empty-sub">Klik tombol "Tambah Jadwal" untuk mulai.</span>
+      </div>
+    ) : (
+      jadwalList.map((item) => (
+        <div class="jadwal-item" data-id={item.id}>
+          <div class="jadwal-item__content">
+            <div class="jadwal-item__header">
+              <span class="jadwal-item__date">
+                {new Date(item.tanggal).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <span class="badge-tanggal">📌 {new Date(item.tanggal).toLocaleDateString('id-ID', {
+                weekday: 'long',
+              })}</span>
+            </div>
+            <strong class="jadwal-item__judul">{item.judul}</strong>
+            {item.deskripsi && <p class="jadwal-item__desc">{item.deskripsi}</p>}
+          </div>
+          <div class="jadwal-item__actions">
+            <button
+              type="button"
+              class="btn-edit"
+              data-id={item.id}
+              data-tanggal={item.tanggal}
+              data-judul={item.judul}
+              data-deskripsi={item.deskripsi || ''}
+            >Edit</button>
+            <button type="button" class="btn-delete" data-id={item.id}>Hapus</button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  <!-- FORM TAMBAH/EDIT -->
+  <div id="jadwalForm" class="jadwal-form hidden">
+    <hr class="form-divider" />
+    <h3 id="jadwalFormTitle">Tambah Jadwal</h3>
+    <input type="hidden" id="jadwalId" />
+
+    <div class="form-grid-2">
+      <div class="field">
+        <label for="jTanggal">Tanggal</label>
+        <input type="date" id="jTanggal" required />
+      </div>
+      <div class="field">
+        <label for="jJudul">Judul Kegiatan</label>
+        <input type="text" id="jJudul" placeholder="Contoh: Pendaftaran Dibuka" required />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="jDeskripsi">Deskripsi (opsional)</label>
+      <textarea
+        id="jDeskripsi"
+        rows="3"
+        placeholder="Contoh: Pendaftaran peserta resmi dibuka untuk seluruh jenjang."
+      ></textarea>
+    </div>
+
+    <p class="status-text" id="jStatus"></p>
+
+    <div class="form-actions">
+      <button type="button" id="btnBatalJadwal" class="btn-outline">Batal</button>
+      <button type="submit" class="btn-primary" id="jSubmitBtn">Simpan Jadwal</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  const btnTambahJadwal = document.getElementById('btnTambahJadwal');
+  const jadwalForm = document.getElementById('jadwalForm');
+  const btnBatalJadwal = document.getElementById('btnBatalJadwal');
+  const jadwalFormTitle = document.getElementById('jadwalFormTitle');
+  const jadwalId = document.getElementById('jadwalId');
+  const jStatus = document.getElementById('jStatus');
+  const jSubmitBtn = document.getElementById('jSubmitBtn');
+
+  function resetJadwalForm() {
+    jadwalForm.reset();
+    jadwalId.value = '';
+    jadwalFormTitle.textContent = 'Tambah Jadwal';
+    jStatus.textContent = '';
+    jStatus.style.color = '';
+  }
+
+  btnTambahJadwal.addEventListener('click', () => {
+    resetJadwalForm();
+    jadwalForm.classList.remove('hidden');
+    jadwalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('jTanggal').focus();
+  });
+
+  btnBatalJadwal.addEventListener('click', () => {
+    jadwalForm.classList.add('hidden');
+    resetJadwalForm();
+  });
+
+  // Edit buttons
+  document.querySelectorAll('.btn-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      jadwalId.value = btn.dataset.id;
+      document.getElementById('jTanggal').value = btn.dataset.tanggal;
+      document.getElementById('jJudul').value = btn.dataset.judul;
+      document.getElementById('jDeskripsi').value = btn.dataset.deskripsi;
+      jadwalFormTitle.textContent = 'Edit Jadwal';
+      jadwalForm.classList.remove('hidden');
+      jadwalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Delete buttons
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Yakin ingin menghapus jadwal ini?')) return;
+
+      const { error } = await supabase
+        .from('jadwal_kompetisi')
+        .delete()
+        .eq('id', btn.dataset.id);
+
+      if (error) {
+        alert('Gagal menghapus: ' + error.message);
+      } else {
+        window.location.reload();
+      }
+    });
+  });
+
+  // Form submit
+  jadwalForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const tanggal = document.getElementById('jTanggal').value;
+    const judul = document.getElementById('jJudul').value.trim();
+    const deskripsi = document.getElementById('jDeskripsi').value.trim();
+
+    if (!tanggal) {
+      jStatus.textContent = '⚠️ Tanggal wajib diisi.';
+      jStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    if (!judul) {
+      jStatus.textContent = '⚠️ Judul kegiatan wajib diisi.';
+      jStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    jSubmitBtn.disabled = true;
+    jStatus.textContent = '⏳ Menyimpan...';
+    jStatus.style.color = '#2563eb';
+
+    const payload = { tanggal, judul, deskripsi: deskripsi || null };
+    let error;
+
+    if (jadwalId.value) {
+      ({ error } = await supabase.from('jadwal_kompetisi').update(payload).eq('id', jadwalId.value));
+    } else {
+      ({ error } = await supabase.from('jadwal_kompetisi').insert(payload));
+    }
+
+    if (error) {
+      jStatus.textContent = '❌ Gagal: ' + error.message;
+      jStatus.style.color = '#dc2626';
+    } else {
+      jStatus.textContent = '✅ Jadwal berhasil ' + (jadwalId.value ? 'diperbarui' : 'ditambahkan') + '!';
+      jStatus.style.color = '#16a34a';
+      setTimeout(() => window.location.reload(), 1000);
+    }
+
+    jSubmitBtn.disabled = false;
+  });
+</script>
+
+<style>
+  /* ----- CARD UTAMA ----- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* ----- TOMBOL ----- */
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-add .plus-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #d1d9e6;
+    color: #475569;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-outline:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  /* ----- JADWAL LIST ----- */
+  .jadwal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin: 1.25rem 0 1.5rem 0;
+  }
+
+  .jadwal-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0.9rem 1rem;
+    background: #fafcff;
+    border-radius: 10px;
+    border: 1px solid #eef2f6;
+    transition: border-color 0.2s, background 0.2s;
+    gap: 0.75rem;
+  }
+  .jadwal-item:hover {
+    background: #f8fafc;
+    border-color: #d9e2ef;
+  }
+
+  .jadwal-item__content {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .jadwal-item__header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .jadwal-item__date {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  .badge-tanggal {
+    background: #eef2ff;
+    color: #2563eb;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.7rem;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  .jadwal-item__judul {
+    font-size: 1rem;
+    color: #0f172a;
+    display: block;
+    margin-bottom: 0.1rem;
+  }
+
+  .jadwal-item__desc {
+    font-size: 0.9rem;
+    color: #475569;
+    margin: 0.1rem 0 0 0;
+    line-height: 1.4;
+  }
+
+  .jadwal-item__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: transparent;
+  }
+
+  .btn-edit {
+    color: #2563eb;
+    background: #eff6ff;
+  }
+  .btn-edit:hover {
+    background: #dbeafe;
+  }
+
+  .btn-delete {
+    color: #dc2626;
+    background: #fef2f2;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+  }
+  .empty-icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ----- FORM TOGGLE ----- */
+  .jadwal-form {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    animation: slideDown 0.3s ease forwards;
+  }
+  .jadwal-form.hidden {
+    display: none;
+  }
+
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 0.5rem 0 1.25rem 0;
+  }
+
+  .jadwal-form h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 1.25rem 0;
+  }
+
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .status-text {
+    font-weight: 500;
+    font-size: 0.95rem;
+    min-height: 1.8rem;
+    margin: 0.5rem 0;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* ----- RESPONSIF ----- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-add {
+      justify-content: center;
+      width: 100%;
+    }
+    .form-grid-2 {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .jadwal-item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .jadwal-item__actions {
+      justify-content: flex-end;
+    }
+    .form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-primary {
+      justify-content: center;
+    }
+    .badge-tanggal {
+      font-size: 0.65rem;
+    }
+  }
+</style>

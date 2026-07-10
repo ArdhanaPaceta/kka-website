@@ -1,0 +1,162 @@
+---
+import { supabase } from '../lib/supabase';
+
+const { data: footer } = await supabase.from('footer_content').select('*').single();
+const { data: socialLinks } = await supabase.from('footer_social_links').select('*').order('urutan', { ascending: true });
+const { data: quickLinks } = await supabase.from('navbar_menus').select('label, href').order('urutan', { ascending: true });
+
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container footer__inner">
+    <div class="footer__brand">
+      <a href="/" class="footer__logo-link">
+        <img src={footer?.logo_url || '/images/logo.png'} alt="Logo KKA" class="footer__logo" />
+        <span>Kompetisi Kompetensi Akademik</span>
+      </a>
+      <p class="footer__tagline">{footer?.tagline}</p>
+    </div>
+
+    <div class="footer__col">
+      <h4>Quick Links</h4>
+      <ul>
+        {(quickLinks ?? []).map((link) => (
+          <li><a href={link.href}>{link.label}</a></li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="footer__col">
+      <h4>Kontak</h4>
+      <ul class="footer__contact">
+        <li>{footer?.alamat}</li>
+        <li>{footer?.email}</li>
+        <li>{footer?.telepon}</li>
+      </ul>
+    </div>
+
+    <div class="footer__col">
+      <h4>Ikuti Kami</h4>
+      <div class="footer__social">
+        {(socialLinks ?? []).map((social) => (
+          <a href={social.href} aria-label={social.label} class="footer__social-link">
+            <span aria-hidden="true">{social.icon}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <div class="footer__bottom">
+    <div class="container footer__bottom-inner">
+      <p>&copy; {year} Kompetisi Kompetensi Akademik. Seluruh hak cipta dilindungi.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--color-dark);
+    color: rgba(248, 250, 252, 0.75);
+    padding-top: 72px;
+  }
+
+  .footer__inner {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr;
+    gap: 40px;
+    padding-bottom: 56px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .footer__logo-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-white);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .footer__logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  .footer__tagline {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 320px;
+  }
+
+  .footer__col h4 {
+    color: var(--color-white);
+    font-size: 0.95rem;
+    margin-bottom: 18px;
+  }
+
+  .footer__col ul {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .footer__col a {
+    font-size: 0.9rem;
+    transition: color var(--transition-fast);
+  }
+
+  .footer__col a:hover {
+    color: var(--color-accent);
+  }
+
+  .footer__contact li {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .footer__social {
+    display: flex;
+    gap: 10px;
+  }
+
+  .footer__social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    transition: background var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .footer__social-link:hover {
+    background: var(--color-accent);
+    transform: translateY(-3px);
+  }
+
+  .footer__bottom {
+    padding-block: 24px;
+  }
+
+  .footer__bottom-inner {
+    text-align: center;
+    font-size: 0.85rem;
+    color: rgba(248, 250, 252, 0.5);
+  }
+
+  @media (max-width: 900px) {
+    .footer__inner {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .footer__inner {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

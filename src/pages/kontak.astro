@@ -1,0 +1,22 @@
+---
+// =============================================================
+// pages/kontak.astro — Halaman Kontak
+// =============================================================
+import MainLayout from '../layouts/MainLayout.astro';
+import Contact from '../components/Contact.astro';
+import FAQ from '../components/FAQ.astro';
+---
+
+<MainLayout
+  title="Kontak"
+  description="Hubungi panitia Kompetisi Kompetensi Akademik untuk pertanyaan lebih lanjut."
+>
+  <section class="page-hero">
+    <div class="container">
+      <h1 class="page-hero__title">Hubungi Kami</h1>
+    </div>
+  </section>
+
+  <Contact />
+  <FAQ />
+</MainLayout>

@@ -1,0 +1,98 @@
+---
+import { supabase } from '../lib/supabase';
+
+const { data: categories } = await supabase
+  .from('competition_categories')
+  .select('*')
+  .order('urutan', { ascending: true });
+---
+
+<section class="category section" id="kategori">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">Kategori Kompetisi</span>
+      <h2 class="section-title">Pilih Kategori Sesuai Jenjang</h2>
+      <p class="section-subtitle mx-auto">
+        KKA terbuka untuk tiga jenjang pendidikan dengan materi dan tingkat kesulitan yang
+        disesuaikan.
+      </p>
+    </div>
+
+    <div class="category__grid">
+      {(categories ?? []).map((cat, i) => (
+        <div class:list={['category__card', 'card', 'reveal', `reveal-delay-${i + 1}`]}>
+          <span class="category__badge">{cat.jenjang}</span>
+          <h3 class="category__title">{cat.title}</h3>
+          <p class="category__desc">{cat.deskripsi}</p>
+          <a href="/regulasi#pendaftaran" class="btn btn-secondary category__btn">Daftar</a>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .category__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+
+  .category__card {
+    padding: 40px 32px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .category__card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--transition-base);
+  }
+
+  .category__card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .category__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-primary);
+    background: rgba(30, 58, 138, 0.08);
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+
+  .category__title {
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+  }
+
+  .category__desc {
+    color: var(--color-gray);
+    font-size: 0.92rem;
+    margin-bottom: 28px;
+  }
+
+  .category__btn {
+    width: 100%;
+  }
+
+  @media (max-width: 900px) {
+    .category__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,86 @@
+---
+// =============================================================
+// components/AlurPendaftaran.astro
+// Section "Alur Pendaftaran" — timeline langkah dari Supabase
+// =============================================================
+import { supabase } from '../lib/supabase';
+
+const { data: steps } = await supabase
+  .from('alur_pendaftaran')
+  .select('*')
+  .order('urutan', { ascending: true });
+---
+
+<section class="flow section" id="alur-pendaftaran">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">Alur Pendaftaran</span>
+      <h2 class="section-title">Langkah Menuju Kompetisi</h2>
+      <p class="section-subtitle mx-auto">
+        Proses pendaftaran KKA dirancang sederhana dan transparan agar setiap peserta dapat
+        mengikutinya dengan mudah.
+      </p>
+    </div>
+
+    {(steps ?? []).length === 0 ? (
+      <p class="flow__empty">Alur pendaftaran belum tersedia.</p>
+    ) : (
+      <div class="flow__timeline">
+        {steps.map((step, i) => (
+          <div class:list={['flow__step', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
+            <div class="flow__number">{String(step.urutan).padStart(2, '0')}</div>
+            <h3 class="flow__title">{step.judul}</h3>
+            <p class="flow__desc">{step.deskripsi}</p>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
+
+<style>
+  .flow__timeline {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 24px;
+  }
+
+  .flow__empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 40px 0;
+  }
+
+  .flow__step {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .flow__number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-secondary, #2563eb);
+  }
+
+  .flow__title {
+    font-size: 1.05rem;
+  }
+
+  .flow__desc {
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 900px) {
+    .flow__timeline {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 500px) {
+    .flow__timeline {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

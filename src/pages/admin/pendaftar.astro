@@ -1,0 +1,398 @@
+---
+// src/pages/admin/pendaftar.astro
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { supabase } from '../../lib/supabase';
+
+// Ambil data pendaftar
+const { data: pendaftar, error } = await supabase
+  .from('pendaftar')
+  .select('*')
+  .order('created_at', { ascending: false });
+
+if (error) {
+  console.error('Error fetch pendaftar:', error);
+}
+
+// Mapping relasi
+let kabupatenMap = {};
+let kecamatanMap = {};
+let sekolahMap = {};
+
+if (!error && pendaftar && pendaftar.length > 0) {
+  const kabIds = [...new Set(pendaftar.map(p => p.kabupaten_id).filter(Boolean))];
+  if (kabIds.length) {
+    const { data: kabList } = await supabase.from('kabupaten').select('id, nama').in('id', kabIds);
+    kabList?.forEach(k => kabupatenMap[k.id] = k.nama);
+  }
+
+  const kecIds = [...new Set(pendaftar.map(p => p.kecamatan_id).filter(Boolean))];
+  if (kecIds.length) {
+    const { data: kecList } = await supabase.from('kecamatan').select('id, nama').in('id', kecIds);
+    kecList?.forEach(k => kecamatanMap[k.id] = k.nama);
+  }
+
+  const sekIds = [...new Set(pendaftar.map(p => p.sekolah_id).filter(Boolean))];
+  if (sekIds.length) {
+    const { data: sekList } = await supabase.from('sekolah').select('id, nama, biaya_jenjang_id').in('id', sekIds);
+    const bjIds = [...new Set(sekList?.map(s => s.biaya_jenjang_id).filter(Boolean) || [])];
+    let bjMap = {};
+    if (bjIds.length) {
+      const { data: bjList } = await supabase.from('biaya_jenjang').select('id, jenjang').in('id', bjIds);
+      bjList?.forEach(b => bjMap[b.id] = b.jenjang);
+    }
+    sekList?.forEach(s => {
+      sekolahMap[s.id] = {
+        nama: s.nama,
+        jenjang: bjMap[s.biaya_jenjang_id] || '-'
+      };
+    });
+  }
+}
+
+const displayData = pendaftar?.map(p => ({
+  ...p,
+  kabupaten: kabupatenMap[p.kabupaten_id] || '-',
+  kecamatan: kecamatanMap[p.kecamatan_id] || '-',
+  sekolah: sekolahMap[p.sekolah_id]?.nama || '-',
+  jenjang: sekolahMap[p.sekolah_id]?.jenjang || '-',
+})) || [];
+
+const total = displayData.length;
+const errorMessage = error?.message || null;
+---
+
+<AdminLayout title="Data Pendaftar">
+  <div class="page-header">
+    <div>
+      <h1>Data Pendaftar</h1>
+      <p class="subtitle">Total: {total} peserta</p>
+    </div>
+    <div class="header-actions">
+      <button id="exportBtn" class="btn-export">Export CSV</button>
+      <button id="refreshBtn" class="btn-refresh">Refresh</button>
+    </div>
+  </div>
+
+  {errorMessage ? (
+    <div class="error-box">
+      <p>Gagal memuat data: {errorMessage}</p>
+    </div>
+  ) : total === 0 ? (
+    <div class="empty-state">
+      <p>Belum ada data pendaftar.</p>
+    </div>
+  ) : (
+    <div class="table-wrapper">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Kode</th>
+              <th>Nama</th>
+              <th>NISN</th>
+              <th>WA</th>
+              <th>Gender</th>
+              <th>Kabupaten</th>
+              <th>Kecamatan</th>
+              <th>Sekolah</th>
+              <th>Jenjang</th>
+              <th>Kelas</th>
+              <th>Status</th>
+              <th>Daftar</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayData.map((p, i) => (
+              <tr key={p.id} data-id={p.id}>
+                <td>{i + 1}</td>
+                <td><code class="kode">{p.kode_pendaftaran}</code></td>
+                <td><strong>{p.nama_siswa}</strong></td>
+                <td>{p.nisn}</td>
+                <td>{p.no_wa}</td>
+                <td>{p.gender}</td>
+                <td>{p.kabupaten}</td>
+                <td>{p.kecamatan}</td>
+                <td>{p.sekolah}</td>
+                <td>{p.jenjang}</td>
+                <td>{p.kelas}</td>
+                <td>
+                  <span class={`status status-${p.status?.toLowerCase().replace(/ /g, '-') || 'menunggu-pembayaran'}`}>
+                    {p.status || 'Menunggu Pembayaran'}
+                  </span>
+                </td>
+                <td>{p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID') : '-'}</td>
+                <td>
+                  <div class="action-cell">
+                    <select class="status-select" data-id={p.id}>
+                      <option value="Menunggu Pembayaran" selected={p.status === 'Menunggu Pembayaran'}>Menunggu Pembayaran</option>
+                      <option value="Lunas" selected={p.status === 'Lunas'}>Lunas</option>
+                      <option value="Batal" selected={p.status === 'Batal'}>Batal</option>
+                    </select>
+                    <button class="btn-update-status" data-id={p.id}>Update</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+  import { supabase } from '../../lib/supabase';
+
+  // --- Update Status (hanya 3 pilihan) ---
+  document.querySelectorAll('.btn-update-status').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const id = this.dataset.id;
+      const select = document.querySelector(`.status-select[data-id="${id}"]`);
+      const newStatus = select.value;
+      const row = this.closest('tr');
+      const statusSpan = row.querySelector('.status');
+      
+      this.disabled = true;
+      this.textContent = 'Menyimpan...';
+      
+      try {
+        const { error } = await supabase
+          .from('pendaftar')
+          .update({ status: newStatus })
+          .eq('id', id);
+          
+        if (error) throw new Error(error.message);
+        
+        // Update tampilan
+        statusSpan.textContent = newStatus;
+        statusSpan.className = `status status-${newStatus.toLowerCase().replace(/ /g, '-')}`;
+        
+        this.textContent = 'Sukses';
+        this.style.background = '#d1fae5';
+        this.style.color = '#065f46';
+        
+        setTimeout(() => {
+          this.textContent = 'Update';
+          this.disabled = false;
+          this.style.background = '';
+          this.style.color = '';
+        }, 2000);
+        
+      } catch (err) {
+        alert('Gagal update status: ' + err.message);
+        this.textContent = 'Update';
+        this.disabled = false;
+      }
+    });
+  });
+
+  // --- Export CSV ---
+  document.getElementById('exportBtn')?.addEventListener('click', () => {
+    const table = document.querySelector('table');
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tr');
+    let csv = [];
+    rows.forEach(row => {
+      const cols = row.querySelectorAll('td, th');
+      const rowData = [];
+      cols.forEach((col, index) => {
+        if (index === cols.length - 1) return; // skip kolom aksi
+        let text = col.innerText.trim();
+        const statusSpan = col.querySelector('.status');
+        if (statusSpan) text = statusSpan.innerText.trim();
+        if (text.includes(',') || text.includes('"')) {
+          text = `"${text.replace(/"/g, '""')}"`;
+        }
+        rowData.push(text);
+      });
+      csv.push(rowData.join(','));
+    });
+    
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pendaftar_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // --- Refresh ---
+  document.getElementById('refreshBtn')?.addEventListener('click', () => {
+    window.location.reload();
+  });
+</script>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: #0f172a;
+  }
+  .subtitle {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .btn-export,
+  .btn-refresh {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+  }
+  .btn-export:hover,
+  .btn-refresh:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+  .error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #e2e8f0;
+    color: #64748b;
+  }
+  .table-wrapper {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #edf2f7;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .table-scroll {
+    overflow-x: auto;
+    padding: 0.5rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 1000px;
+  }
+  th, td {
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid #eef2f6;
+    white-space: nowrap;
+  }
+  th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #1e293b;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  tr:hover td {
+    background: #fafcff;
+  }
+  .kode {
+    font-size: 0.75rem;
+    background: #f1f5f9;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  .status {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  .status-menunggu-pembayaran { background: #fef3c7; color: #92400e; }
+  .status-lunas { background: #d1fae5; color: #065f46; }
+  .status-batal { background: #fecaca; color: #991b1b; }
+
+  .action-cell {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .status-select {
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    background: white;
+    cursor: pointer;
+  }
+  .btn-update-status {
+    padding: 0.25rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-update-status:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+  .btn-update-status:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .header-actions {
+      justify-content: stretch;
+    }
+    .btn-export, .btn-refresh {
+      flex: 1;
+      text-align: center;
+    }
+    .action-cell {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .status-select {
+      width: 100%;
+    }
+    .btn-update-status {
+      width: 100%;
+    }
+  }
+</style>

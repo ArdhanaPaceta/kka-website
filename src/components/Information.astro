@@ -1,0 +1,101 @@
+---
+// =============================================================
+// components/Information.astro
+// Section "Informasi" — grid kartu informasi dari Supabase
+// =============================================================
+import { supabase } from '../lib/supabase';
+
+const { data: infoCards } = await supabase
+  .from('informasi_kartu')
+  .select('*')
+  .order('urutan', { ascending: true });
+---
+
+<section class="information section" id="informasi">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">Informasi Kompetisi</span>
+      <h2 class="section-title">Semua yang Perlu Anda Ketahui</h2>
+      <p class="section-subtitle mx-auto">
+        Simak informasi penting seputar jenjang peserta, jadwal, lokasi, dan persyaratan sebelum
+        melakukan pendaftaran.
+      </p>
+    </div>
+
+    {(infoCards ?? []).length === 0 ? (
+      <p class="information__empty">Informasi belum tersedia.</p>
+    ) : (
+      <div class="information__grid">
+        {infoCards.map((card, i) => (
+          <div class:list={['information__card', 'card', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
+            <span class="information__icon">{card.icon}</span>
+            <h3 class="information__label">{card.label}</h3>
+            <ul class="information__list">
+              {(card.items ?? []).map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <div class="information__cta reveal">
+      <a href="/informasi" class="btn btn-secondary">Lihat Selengkapnya</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .information__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .information__empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 40px 0;
+  }
+
+  .information__card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .information__icon {
+    font-size: 1.8rem;
+  }
+
+  .information__label {
+    font-size: 1.05rem;
+  }
+
+  .information__list {
+    padding-left: 18px;
+    color: var(--color-gray);
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .information__cta {
+    text-align: center;
+    margin-top: 40px;
+  }
+
+  @media (max-width: 900px) {
+    .information__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 500px) {
+    .information__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

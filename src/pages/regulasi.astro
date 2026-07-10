@@ -1,0 +1,220 @@
+---
+// =============================================================
+// pages/regulasi.astro — Halaman Regulasi & Pendaftaran
+// =============================================================
+import MainLayout from '../layouts/MainLayout.astro';
+import CompetitionCategory from '../components/CompetitionCategory.astro';
+import RegistrationFlow from '../components/RegistrationFlow.astro';
+
+const rules = [
+  'Peserta merupakan siswa aktif yang dibuktikan dengan kartu pelajar atau surat keterangan sekolah.',
+  'Setiap sekolah dapat mendaftarkan lebih dari satu peserta pada jenjang yang sama.',
+  'Peserta wajib mengikuti technical meeting sesuai jadwal yang telah ditentukan.',
+  'Keputusan dewan juri bersifat mutlak dan tidak dapat diganggu gugat.',
+  'Biaya pendaftaran yang telah dibayarkan tidak dapat dikembalikan (non-refundable).',
+  'Peserta wajib hadir 30 menit sebelum kompetisi dimulai.',
+];
+
+const kabupatenList = [
+  'Kabupaten A',
+  'Kabupaten B',
+  'Kabupaten C',
+  'Kabupaten D',
+  'Kabupaten E',
+];
+---
+
+<MainLayout
+  title="Regulasi & Pendaftaran"
+  description="Baca regulasi resmi dan lakukan pendaftaran Kompetisi Kompetensi Akademik secara online."
+>
+  <section class="page-hero">
+    <div class="container">
+      <h1 class="page-hero__title">Regulasi</h1>
+    </div>
+  </section>
+
+  <CompetitionCategory />
+  <RegistrationFlow />
+
+  <section class="section rules">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-eyebrow">Regulasi</span>
+        <h2 class="section-title">Ketentuan Umum Kompetisi</h2>
+        <p class="section-subtitle mx-auto">
+          Setiap peserta wajib membaca dan memahami ketentuan berikut sebelum mengikuti
+          kompetisi.
+        </p>
+      </div>
+
+      <ol class="rules__list reveal">
+        {rules.map((rule) => (
+          <li>{rule}</li>
+        ))}
+      </ol>
+    </div>
+  </section>
+</MainLayout>
+
+<style>
+  .rules__list {
+    max-width: 780px;
+    margin-inline: auto;
+    counter-reset: rule;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .rules__list li {
+    position: relative;
+    padding-left: 44px;
+    color: var(--color-gray);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    counter-increment: rule;
+  }
+
+  .rules__list li::before {
+    content: counter(rule);
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .registration {
+    background: var(--color-light);
+  }
+
+  .registration__form {
+    max-width: 780px;
+    margin-inline: auto;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: var(--color-white);
+  }
+
+  .registration__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .registration__field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .registration__field label {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .registration__field input,
+  .registration__field select {
+    padding: 13px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-white);
+    color: var(--color-dark);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .registration__field input:focus,
+  .registration__field select:focus {
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .registration__checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--color-gray);
+  }
+
+  .registration__checkbox input {
+    margin-top: 3px;
+  }
+
+  .registration__submit {
+    align-self: flex-start;
+  }
+
+  .registration__status {
+    font-size: 0.88rem;
+    color: var(--color-secondary);
+    min-height: 1.2em;
+  }
+
+  @media (max-width: 640px) {
+    .registration__row {
+      grid-template-columns: 1fr;
+    }
+    .registration__form {
+      padding: 28px;
+    }
+  }
+</style>
+
+<script>
+  // ===========================================================
+  // Form Pendaftaran — Vanilla JavaScript
+  // Catatan: hubungkan ke Supabase dengan meng-import helper
+  // `daftarPeserta` dari src/lib/supabase.ts
+  // ===========================================================
+  const form = document.getElementById('registrationForm') as HTMLFormElement | null;
+  const statusEl = document.getElementById('registrationStatus');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const payload = {
+      nama_lengkap: String(formData.get('nama_lengkap') || '').trim(),
+      email: String(formData.get('email') || '').trim(),
+      no_whatsapp: String(formData.get('no_whatsapp') || '').trim(),
+      jenjang: String(formData.get('jenjang') || ''),
+      asal_sekolah: String(formData.get('asal_sekolah') || '').trim(),
+      kabupaten: String(formData.get('kabupaten') || ''),
+    };
+
+    const isValid = Object.values(payload).every((v) => v.length > 0);
+
+    if (!isValid) {
+      if (statusEl) statusEl.textContent = 'Mohon lengkapi seluruh kolom formulir.';
+      return;
+    }
+
+    if (statusEl) statusEl.textContent = 'Mengirim data pendaftaran...';
+
+    try {
+      // Contoh integrasi Supabase (aktifkan setelah lib/supabase.ts dikonfigurasi):
+      //
+      // import { daftarPeserta } from '../lib/supabase';
+      // await daftarPeserta(payload);
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      if (statusEl) statusEl.textContent = 'Pendaftaran berhasil! Silakan cek email untuk konfirmasi.';
+      form.reset();
+    } catch (err) {
+      if (statusEl) statusEl.textContent = 'Terjadi kesalahan saat mengirim data. Silakan coba lagi.';
+    }
+  });
+</script>

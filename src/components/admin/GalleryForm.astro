@@ -1,0 +1,571 @@
+---
+import { supabase } from '../../lib/supabase';
+
+const { data: galeri } = await supabase
+  .from('galeri')
+  .select('*')
+  .order('created_at', { ascending: false });
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola Galeri</h2>
+      <p class="form-hint">Upload, lihat, atau hapus foto yang tampil di galeri halaman publik.</p>
+    </div>
+    <span class="badge-count">{galeri?.length ?? 0} Foto</span>
+  </div>
+
+  <!-- FORM UPLOAD -->
+  <form id="galleryForm" class="gallery-upload-form">
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-placeholder">
+        <span class="upload-icon">🖼️</span>
+        <p>Klik atau seret gambar ke sini</p>
+        <span class="upload-hint">Format JPG, PNG, WEBP (Maks. 5MB)</span>
+      </div>
+      <input type="file" id="gImageFile" accept="image/*" required />
+      <img id="gPreview" class="preview-img" style="display:none;" alt="Pratinjau gambar" />
+    </div>
+
+    <div class="form-grid-2">
+      <div class="field">
+        <label for="gJudul">Judul Foto</label>
+        <input type="text" id="gJudul" placeholder="Contoh: Pembukaan Kompetisi 2025" required />
+      </div>
+      <div class="field">
+        <label for="gDeskripsi">Deskripsi (opsional)</label>
+        <input type="text" id="gDeskripsi" placeholder="Keterangan singkat foto..." />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" id="gSubmitBtn">
+        <span class="plus-icon">↑</span> Upload Foto
+      </button>
+      <span id="gStatus" class="status-text"></span>
+    </div>
+  </form>
+
+  <hr class="form-divider" />
+
+  <!-- GRID GALERI -->
+  <div class="section-header">
+    <h3>Semua Foto</h3>
+  </div>
+
+  <div id="galleryList" class="gallery-grid">
+    {(galeri ?? []).length === 0 ? (
+      <div class="empty-state">
+        <span class="empty-icon">📸</span>
+        <p>Belum ada foto di galeri.</p>
+        <span class="empty-sub">Upload foto pertama menggunakan form di atas.</span>
+      </div>
+    ) : (
+      galeri.map((item) => (
+        <div class="gallery-item" data-id={item.id}>
+          <div class="gallery-item__image">
+            <img src={item.url_gambar} alt={item.judul_foto || 'Foto galeri'} loading="lazy" />
+          </div>
+          <div class="gallery-item__info">
+            <strong>{item.judul_foto || '(Tanpa judul)'}</strong>
+            {item.deskripsi && <p class="gallery-item__desc">{item.deskripsi}</p>}
+            <small>{new Date(item.created_at).toLocaleString('id-ID')}</small>
+          </div>
+          <button
+            type="button"
+            class="btn-delete"
+            data-id={item.id}
+            data-path={item.path_gambar}
+          >
+            Hapus
+          </button>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  const BUCKET = 'galeri';
+
+  const galleryForm = document.getElementById('galleryForm');
+  const gStatus = document.getElementById('gStatus');
+  const gImageFile = document.getElementById('gImageFile');
+  const gPreview = document.getElementById('gPreview');
+  const gSubmitBtn = document.getElementById('gSubmitBtn');
+  const uploadArea = document.getElementById('uploadArea');
+
+  // Preview image when selected
+  gImageFile.addEventListener('change', () => {
+    const file = gImageFile.files?.[0];
+    if (file) {
+      gPreview.src = URL.createObjectURL(file);
+      gPreview.style.display = 'block';
+      uploadArea.querySelector('.upload-placeholder').style.display = 'none';
+    } else {
+      gPreview.style.display = 'none';
+      uploadArea.querySelector('.upload-placeholder').style.display = 'block';
+    }
+  });
+
+  // Drag and drop support
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      gImageFile.files = files;
+      gImageFile.dispatchEvent(new Event('change'));
+    }
+  });
+
+  // Form submit
+  galleryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const file = gImageFile.files?.[0];
+    if (!file) {
+      gStatus.textContent = '⚠️ Silakan pilih gambar terlebih dahulu.';
+      gStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    // Validasi ukuran file (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      gStatus.textContent = '⚠️ Ukuran file terlalu besar. Maksimal 5MB.';
+      gStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    gSubmitBtn.disabled = true;
+    gStatus.textContent = '⏳ Mengunggah gambar...';
+    gStatus.style.color = '#2563eb';
+
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(fileName, file);
+
+      if (uploadError) {
+        gStatus.textContent = '❌ Gagal upload: ' + uploadError.message;
+        gStatus.style.color = '#dc2626';
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(fileName);
+
+      const payload = {
+        judul_foto: document.getElementById('gJudul').value.trim() || null,
+        deskripsi: document.getElementById('gDeskripsi').value.trim() || null,
+        url_gambar: publicUrlData.publicUrl,
+        path_gambar: fileName,
+      };
+
+      const { error: insertError } = await supabase.from('galeri').insert(payload);
+
+      if (insertError) {
+        gStatus.textContent = '❌ Gagal menyimpan data: ' + insertError.message;
+        gStatus.style.color = '#dc2626';
+        await supabase.storage.from(BUCKET).remove([fileName]);
+        return;
+      }
+
+      gStatus.textContent = '✅ Foto berhasil diupload!';
+      gStatus.style.color = '#16a34a';
+      galleryForm.reset();
+      gPreview.style.display = 'none';
+      uploadArea.querySelector('.upload-placeholder').style.display = 'block';
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      gStatus.textContent = '❌ Terjadi kesalahan tak terduga.';
+      gStatus.style.color = '#dc2626';
+    } finally {
+      gSubmitBtn.disabled = false;
+    }
+  });
+
+  // Delete buttons
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Yakin ingin menghapus foto ini dari galeri?')) return;
+
+      const id = btn.dataset.id;
+      const path = btn.dataset.path;
+
+      const { error: dbError } = await supabase.from('galeri').delete().eq('id', id);
+
+      if (dbError) {
+        alert('Gagal menghapus data: ' + dbError.message);
+        return;
+      }
+
+      if (path) {
+        await supabase.storage.from(BUCKET).remove([path]);
+      }
+
+      window.location.reload();
+    });
+  });
+</script>
+
+<style>
+  /* ----- CARD UTAMA ----- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .badge-count {
+    background: #eef2ff;
+    color: #2563eb;
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0 0 1rem 0;
+  }
+
+  .section-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  /* ----- TOMBOL ----- */
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .plus-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .btn-delete {
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: #fef2f2;
+    color: #dc2626;
+    margin: 0 12px 12px;
+    align-self: flex-start;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  /* ----- UPLOAD AREA ----- */
+  .gallery-upload-form {
+    margin-bottom: 0.5rem;
+  }
+
+  .upload-area {
+    position: relative;
+    border: 2px dashed #d1d9e6;
+    border-radius: 12px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #fafcff;
+    margin-bottom: 1.25rem;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .upload-area:hover {
+    border-color: #2563eb;
+    background: #f0f4ff;
+  }
+  .upload-area.dragover {
+    border-color: #2563eb;
+    background: #e8efff;
+  }
+  .upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .upload-placeholder {
+    pointer-events: none;
+  }
+  .upload-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .upload-placeholder p {
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+  }
+  .upload-hint {
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .preview-img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: contain;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .status-text {
+    font-weight: 500;
+    font-size: 0.95rem;
+    min-height: 1.8rem;
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 1.5rem 0 1.25rem 0;
+  }
+
+  /* ----- GALLERY GRID ----- */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .gallery-item {
+    background: #fafcff;
+    border: 1px solid #eef2f6;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  }
+  .gallery-item:hover {
+    border-color: #d9e2ef;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .gallery-item__image {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #f1f5f9;
+  }
+  .gallery-item__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  .gallery-item:hover .gallery-item__image img {
+    transform: scale(1.03);
+  }
+
+  .gallery-item__info {
+    padding: 0.75rem 0.9rem 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+  }
+  .gallery-item__info strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+  }
+  .gallery-item__desc {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0.1rem 0;
+    line-height: 1.3;
+  }
+  .gallery-item__info small {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+    grid-column: 1 / -1;
+  }
+  .empty-icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ----- RESPONSIF ----- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .form-grid-2 {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .gallery-grid {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-primary {
+      justify-content: center;
+    }
+    .upload-area {
+      padding: 1.5rem 0.5rem;
+      min-height: 100px;
+    }
+    .upload-icon {
+      font-size: 2rem;
+    }
+  }
+</style>

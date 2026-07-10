@@ -1,0 +1,434 @@
+---
+import { supabase } from '../../lib/supabase';
+
+const { data: contact } = await supabase.from('contact_info').select('*').single();
+const { data: messages } = await supabase
+  .from('contact_messages')
+  .select('*')
+  .order('created_at', { ascending: false });
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola Kontak</h2>
+      <p class="form-hint">Atur informasi kontak yang tampil di halaman publik.</p>
+    </div>
+    <span class="badge-count">{messages?.length ?? 0} Pesan</span>
+  </div>
+
+  <!-- FORM INFO KONTAK -->
+  <form id="contactInfoForm" class="contact-form">
+    <div class="field">
+      <label for="cAlamat">Alamat</label>
+      <input type="text" id="cAlamat" value={contact?.alamat ?? ''} placeholder="Masukkan alamat lengkap" />
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="cEmail">Email</label>
+        <input type="email" id="cEmail" value={contact?.email ?? ''} placeholder="contoh@email.com" />
+      </div>
+      <div class="field">
+        <label for="cWhatsapp">WhatsApp</label>
+        <input type="text" id="cWhatsapp" value={contact?.whatsapp ?? ''} placeholder="08xx-xxxx-xxxx" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cMap">URL Embed Peta (OpenStreetMap / Google Maps)</label>
+      <input type="text" id="cMap" value={contact?.map_embed_url ?? ''} placeholder="https://www.google.com/maps/embed?..." />
+      <small class="field-hint">Masukkan URL iframe embed peta dari Google Maps atau OpenStreetMap.</small>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" id="cSubmitBtn">Simpan Info Kontak</button>
+      <span id="cStatus" class="status-text"></span>
+    </div>
+  </form>
+
+  <hr class="form-divider" />
+
+  <!-- DAFTAR PESAN -->
+  <div class="list-header">
+    <h3>Pesan Masuk</h3>
+  </div>
+
+  <div id="messageList" class="message-list">
+    {(messages ?? []).length === 0 ? (
+      <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>Belum ada pesan masuk.</p>
+        <span class="empty-sub">Pesan dari pengunjung akan muncul di sini.</span>
+      </div>
+    ) : (
+      messages.map((msg) => (
+        <div class="message-item" data-id={msg.id}>
+          <div class="message-item__header">
+            <strong>{msg.nama}</strong>
+            {!msg.is_read && <span class="badge-unread">Baru</span>}
+            <span class="message-date">{new Date(msg.created_at).toLocaleString('id-ID')}</span>
+          </div>
+          <div class="message-item__body">
+            <span class="message-email">{msg.email}</span>
+            <p>{msg.pesan}</p>
+          </div>
+          <div class="message-item__actions">
+            <button type="button" class="btn-delete" data-id={msg.id}>Hapus</button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  const contactInfoForm = document.getElementById('contactInfoForm');
+  const cStatus = document.getElementById('cStatus');
+  const cSubmitBtn = document.getElementById('cSubmitBtn');
+
+  contactInfoForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    cSubmitBtn.disabled = true;
+    cStatus.textContent = '⏳ Menyimpan...';
+    cStatus.style.color = '#2563eb';
+
+    const payload = {
+      alamat: document.getElementById('cAlamat').value,
+      email: document.getElementById('cEmail').value,
+      whatsapp: document.getElementById('cWhatsapp').value,
+      map_embed_url: document.getElementById('cMap').value,
+    };
+
+    const { data: existing } = await supabase.from('contact_info').select('id').single();
+
+    const { error } = await supabase
+      .from('contact_info')
+      .update(payload)
+      .eq('id', existing.id);
+
+    if (error) {
+      cStatus.textContent = '❌ Gagal: ' + error.message;
+      cStatus.style.color = '#dc2626';
+    } else {
+      cStatus.textContent = '✅ Tersimpan!';
+      cStatus.style.color = '#16a34a';
+      setTimeout(() => {
+        cStatus.textContent = '';
+        cSubmitBtn.disabled = false;
+      }, 2000);
+    }
+  });
+
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Hapus pesan ini?')) return;
+
+      const { error } = await supabase
+        .from('contact_messages')
+        .delete()
+        .eq('id', btn.dataset.id);
+
+      if (error) {
+        alert('Gagal menghapus: ' + error.message);
+      } else {
+        window.location.reload();
+      }
+    });
+  });
+</script>
+
+<style>
+  /* ----- CARD UTAMA ----- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .badge-count {
+    background: #eef2ff;
+    color: #2563eb;
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ----- FORM ----- */
+  .contact-form {
+    margin-bottom: 0.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .field-hint {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .status-text {
+    font-weight: 500;
+    font-size: 0.95rem;
+    min-height: 1.8rem;
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 1.5rem 0 1.25rem 0;
+  }
+
+  /* ----- LIST HEADER ----- */
+  .list-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 1rem 0;
+  }
+
+  /* ----- MESSAGE LIST ----- */
+  .message-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .message-item {
+    padding: 1rem 1.1rem;
+    background: #fafcff;
+    border-radius: 10px;
+    border: 1px solid #eef2f6;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .message-item:hover {
+    background: #f8fafc;
+    border-color: #d9e2ef;
+    transform: translateX(4px);
+  }
+
+  .message-item__header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .message-item__header strong {
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  .badge-unread {
+    background: #dbeafe;
+    color: #2563eb;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .message-date {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-left: auto;
+  }
+
+  .message-item__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .message-email {
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+  .message-item__body p {
+    font-size: 0.95rem;
+    color: #334155;
+    margin: 0.1rem 0 0 0;
+    line-height: 1.5;
+  }
+
+  .message-item__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+  }
+
+  .btn-delete {
+    border: none;
+    padding: 0.35rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: #fef2f2;
+    color: #dc2626;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+  }
+  .empty-icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ----- RESPONSIF ----- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-primary {
+      justify-content: center;
+    }
+    .message-item__header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.3rem;
+    }
+    .message-date {
+      margin-left: 0;
+    }
+    .message-item__actions {
+      justify-content: stretch;
+    }
+    .btn-delete {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>

@@ -1,0 +1,608 @@
+---
+import { supabase } from '../../lib/supabase';
+
+const { data: artikelList } = await supabase
+  .from('blog_artikel')
+  .select('*')
+  .order('tanggal', { ascending: false });
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola Blog</h2>
+      <p class="form-hint">Tambah, lihat, atau hapus artikel blog yang tampil di halaman publik.</p>
+    </div>
+    <span class="badge-count">{artikelList?.length ?? 0} Artikel</span>
+  </div>
+
+  <!-- FORM TAMBAH -->
+  <form id="blogForm" class="blog-form">
+    <div class="form-grid">
+      <div class="field">
+        <label for="bJudul">Judul Artikel</label>
+        <input type="text" id="bJudul" placeholder="Contoh: Tips Persiapan Menghadapi KKA" required />
+      </div>
+      <div class="field">
+        <label for="bTanggal">Tanggal</label>
+        <input type="date" id="bTanggal" required />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="bRingkasan">Ringkasan (excerpt)</label>
+      <textarea
+        id="bRingkasan"
+        rows="3"
+        placeholder="Strategi belajar efektif agar siswa lebih percaya diri..."
+        required
+      ></textarea>
+    </div>
+
+    <div class="field field-upload">
+      <label for="bImageFile">Gambar Artikel</label>
+      <div class="upload-area" id="uploadArea">
+        <input type="file" id="bImageFile" accept="image/*" required />
+        <div class="upload-placeholder">
+          <span class="upload-icon">🖼️</span>
+          <p>Klik atau seret gambar ke sini</p>
+          <small>Format: JPG, PNG, WEBP (max 5MB)</small>
+        </div>
+        <img id="bPreview" class="preview-img" style="display:none;" alt="Pratinjau gambar" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" id="bSubmitBtn">
+        <span class="icon-plus">+</span> Tambah Artikel
+      </button>
+      <span id="bStatus" class="status-text"></span>
+    </div>
+  </form>
+
+  <hr class="form-divider" />
+
+  <!-- LIST ARTIKEL -->
+  <div class="list-header">
+    <h3>Daftar Artikel</h3>
+  </div>
+
+  <div id="blogList" class="blog-list">
+    {(artikelList ?? []).length === 0 ? (
+      <div class="empty-state">
+        <span class="empty-icon">📝</span>
+        <p>Belum ada artikel blog.</p>
+        <span class="empty-sub">Tambahkan artikel pertama menggunakan form di atas.</span>
+      </div>
+    ) : (
+      artikelList.map((item) => (
+        <div class="blog-item" data-id={item.id}>
+          <div class="blog-item__image">
+            <img src={item.gambar} alt={item.judul} loading="lazy" />
+          </div>
+          <div class="blog-item__body">
+            <strong>{item.judul}</strong>
+            <span class="blog-date">
+              📅 {new Date(item.tanggal).toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric',
+              })}
+            </span>
+            <p>{item.ringkasan}</p>
+          </div>
+          <button
+            type="button"
+            class="btn-delete"
+            data-id={item.id}
+            data-path={item.path_gambar}
+          >
+            🗑️ Hapus
+          </button>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  const BUCKET = 'blog';
+
+  const blogForm = document.getElementById('blogForm');
+  const bStatus = document.getElementById('bStatus');
+  const bImageFile = document.getElementById('bImageFile');
+  const bPreview = document.getElementById('bPreview');
+  const bSubmitBtn = document.getElementById('bSubmitBtn');
+  const uploadArea = document.getElementById('uploadArea');
+
+  // Preview gambar saat dipilih
+  bImageFile.addEventListener('change', () => {
+    const file = bImageFile.files?.[0];
+    if (file) {
+      bPreview.src = URL.createObjectURL(file);
+      bPreview.style.display = 'block';
+      // Sembunyikan placeholder
+      const placeholder = uploadArea.querySelector('.upload-placeholder');
+      if (placeholder) placeholder.style.display = 'none';
+    } else {
+      bPreview.style.display = 'none';
+      const placeholder = uploadArea.querySelector('.upload-placeholder');
+      if (placeholder) placeholder.style.display = 'block';
+    }
+  });
+
+  // Drag and drop support
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      bImageFile.files = files;
+      bImageFile.dispatchEvent(new Event('change'));
+    }
+  });
+
+  // Set tanggal default ke hari ini
+  document.getElementById('bTanggal').value = new Date().toISOString().split('T')[0];
+
+  blogForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const file = bImageFile.files?.[0];
+    if (!file) {
+      bStatus.textContent = '⚠️ Silakan pilih gambar terlebih dahulu.';
+      bStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    // Validasi ukuran file (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      bStatus.textContent = '⚠️ Ukuran gambar maksimal 5MB.';
+      bStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    bSubmitBtn.disabled = true;
+    bStatus.textContent = '⏳ Mengunggah gambar...';
+    bStatus.style.color = '#2563eb';
+
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(fileName, file);
+
+      if (uploadError) {
+        bStatus.textContent = '❌ Gagal upload: ' + uploadError.message;
+        bStatus.style.color = '#dc2626';
+        bSubmitBtn.disabled = false;
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(fileName);
+
+      const payload = {
+        judul: document.getElementById('bJudul').value.trim(),
+        tanggal: document.getElementById('bTanggal').value,
+        ringkasan: document.getElementById('bRingkasan').value.trim(),
+        gambar: publicUrlData.publicUrl,
+        path_gambar: fileName,
+      };
+
+      const { error: insertError } = await supabase.from('blog_artikel').insert(payload);
+
+      if (insertError) {
+        bStatus.textContent = '❌ Gagal menyimpan data: ' + insertError.message;
+        bStatus.style.color = '#dc2626';
+        await supabase.storage.from(BUCKET).remove([fileName]);
+        bSubmitBtn.disabled = false;
+        return;
+      }
+
+      bStatus.textContent = '✅ Artikel berhasil ditambahkan!';
+      bStatus.style.color = '#16a34a';
+      blogForm.reset();
+      bPreview.style.display = 'none';
+      const placeholder = uploadArea.querySelector('.upload-placeholder');
+      if (placeholder) placeholder.style.display = 'block';
+      document.getElementById('bTanggal').value = new Date().toISOString().split('T')[0];
+      
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      bStatus.textContent = '❌ Terjadi kesalahan tak terduga.';
+      bStatus.style.color = '#dc2626';
+    } finally {
+      bSubmitBtn.disabled = false;
+    }
+  });
+
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Hapus artikel ini?')) return;
+
+      const id = btn.dataset.id;
+      const path = btn.dataset.path;
+
+      const { error: dbError } = await supabase.from('blog_artikel').delete().eq('id', id);
+
+      if (dbError) {
+        alert('❌ Gagal menghapus data: ' + dbError.message);
+        return;
+      }
+
+      if (path) {
+        await supabase.storage.from(BUCKET).remove([path]);
+      }
+
+      window.location.reload();
+    });
+  });
+</script>
+
+<style>
+  /* ----- CARD UTAMA ----- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .badge-count {
+    background: #eef2ff;
+    color: #2563eb;
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ----- FORM ----- */
+  .blog-form {
+    margin-bottom: 0.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  /* ----- UPLOAD AREA ----- */
+  .field-upload {
+    margin-bottom: 0.5rem;
+  }
+
+  .upload-area {
+    position: relative;
+    border: 2px dashed #d1d9e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+    background: #fafcff;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .upload-area:hover {
+    border-color: #2563eb;
+    background: #f0f4ff;
+  }
+  .upload-area.dragover {
+    border-color: #2563eb;
+    background: #eef2ff;
+    transform: scale(1.02);
+  }
+
+  .upload-area input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .upload-placeholder {
+    pointer-events: none;
+  }
+  .upload-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .upload-placeholder p {
+    font-weight: 500;
+    color: #1e293b;
+    margin: 0;
+  }
+  .upload-placeholder small {
+    color: #94a3b8;
+    font-size: 0.8rem;
+  }
+
+  .preview-img {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid #2563eb;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+  }
+
+  /* ----- FORM ACTIONS ----- */
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .icon-plus {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .status-text {
+    font-weight: 500;
+    font-size: 0.95rem;
+    min-height: 1.8rem;
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 1.5rem 0 1.25rem 0;
+  }
+
+  /* ----- LIST HEADER ----- */
+  .list-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 1rem 0;
+  }
+
+  /* ----- LIST ARTIKEL ----- */
+  .blog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .blog-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    background: #fafcff;
+    border-radius: 10px;
+    border: 1px solid #eef2f6;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    align-items: flex-start;
+  }
+  .blog-item:hover {
+    background: #f8fafc;
+    border-color: #d9e2ef;
+    transform: translateX(4px);
+  }
+
+  .blog-item__image {
+    flex-shrink: 0;
+    width: 120px;
+    height: 90px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f1f5f9;
+  }
+  .blog-item__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .blog-item__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .blog-item__body strong {
+    font-size: 1rem;
+    color: #0f172a;
+  }
+  .blog-item__body .blog-date {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+  .blog-item__body p {
+    font-size: 0.9rem;
+    color: #475569;
+    margin: 0.2rem 0 0 0;
+    line-height: 1.4;
+  }
+
+  .btn-delete {
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: #fef2f2;
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+  }
+  .empty-icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ----- RESPONSIF ----- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .blog-item {
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .blog-item__image {
+      width: 100%;
+      height: 150px;
+    }
+    .btn-delete {
+      width: 100%;
+      text-align: center;
+      padding: 0.6rem;
+    }
+    .form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-primary {
+      justify-content: center;
+    }
+    .upload-area {
+      min-height: 120px;
+      padding: 1rem;
+    }
+    .preview-img {
+      max-width: 100%;
+      max-height: 180px;
+    }
+  }
+</style>

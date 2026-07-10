@@ -1,0 +1,144 @@
+---
+// =============================================================
+// pages/tentang.astro — Halaman Tentang
+// =============================================================
+import MainLayout from '../layouts/MainLayout.astro';
+import About from '../components/About.astro';
+import Contact from '../components/Contact.astro';
+
+const milestones = [
+  { year: '2019', desc: 'KKA pertama kali diselenggarakan dengan diikuti 20 sekolah.' },
+  { year: '2021', desc: 'Perluasan kategori kompetisi mencakup jenjang SMK.' },
+  { year: '2023', desc: 'Jumlah peserta menembus lebih dari 500 sekolah se-kabupaten.' },
+  { year: '2026', desc: 'KKA hadir dengan sistem pendaftaran digital yang lebih mudah.' },
+];
+---
+
+<MainLayout
+  title="Tentang"
+  description="Kenali visi, misi, dan sejarah penyelenggaraan Kompetisi Kompetensi Akademik (KKA)."
+>
+  <section class="page-hero">
+    <div class="container">
+      <h1 class="page-hero__title">Tentang Kompetisi Kompetensi Akademik</h1>
+    </div>
+  </section>
+
+  <About />
+
+  <section class="section vision">
+    <div class="container vision__grid">
+      <div class="vision__card card reveal">
+        <span class="vision__icon">🎯</span>
+        <h3>Visi</h3>
+        <p>
+          Menjadi wadah kompetisi akademik terdepan yang melahirkan generasi pelajar unggul,
+          berdaya saing, dan berintegritas.
+        </p>
+      </div>
+      <div class="vision__card card reveal reveal-delay-1">
+        <span class="vision__icon">🚀</span>
+        <h3>Misi</h3>
+        <p>
+          Menyelenggarakan kompetisi yang adil dan mendidik, mendorong budaya belajar aktif, serta
+          memperluas akses kompetisi bagi pelajar di seluruh kabupaten.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section milestones">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-eyebrow">Perjalanan Kami</span>
+        <h2 class="section-title">Sejarah Singkat KKA</h2>
+      </div>
+
+      <div class="milestones__grid">
+        {milestones.map((m, i) => (
+          <div class:list={['milestones__item', 'card', 'reveal', `reveal-delay-${i + 1}`]}>
+            <span class="milestones__year">{m.year}</span>
+            <p>{m.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <Contact />
+</MainLayout>
+
+<style>
+  .vision__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+
+  .vision__card {
+    padding: 40px;
+  }
+
+  .vision__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    font-size: 1.6rem;
+    background: rgba(30, 58, 138, 0.08);
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+  }
+
+  .vision__card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+  }
+
+  .vision__card p {
+    color: var(--color-gray);
+  }
+
+  .milestones {
+    background: var(--color-light);
+  }
+
+  .milestones__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .milestones__item {
+    padding: 28px 24px;
+    background: var(--color-white);
+  }
+
+  .milestones__year {
+    display: inline-block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-secondary);
+    margin-bottom: 10px;
+  }
+
+  .milestones__item p {
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 900px) {
+    .vision__grid,
+    .milestones__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .vision__grid,
+    .milestones__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

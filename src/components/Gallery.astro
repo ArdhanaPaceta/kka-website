@@ -1,0 +1,242 @@
+---
+// =============================================================
+// components/Gallery.astro
+// Section "Galeri" — grid gambar dari Supabase dengan hover zoom & lightbox
+// =============================================================
+import { supabase } from '../lib/supabase';
+
+const { data: galeri } = await supabase
+  .from('galeri')
+  .select('*')
+  .order('created_at', { ascending: false });
+
+const images = (galeri ?? []).map((item) => ({
+  src: item.url_gambar,
+  alt: item.judul_foto || 'Dokumentasi kegiatan KKA',
+}));
+---
+
+<section class="gallery section" id="galeri">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">Galeri</span>
+      <h2 class="section-title">Momen Kompetisi Tahun Sebelumnya</h2>
+      <p class="section-subtitle mx-auto">
+        Dokumentasi keseruan dan semangat kompetisi para peserta KKA dari tahun ke tahun.
+      </p>
+    </div>
+
+    {images.length === 0 ? (
+      <p class="gallery__empty">Belum ada foto di galeri.</p>
+    ) : (
+      <div class="gallery__grid">
+        {images.map((img, i) => (
+          <button
+            type="button"
+            class:list={['gallery__item', 'reveal', `reveal-delay-${(i % 4) + 1}`]}
+            data-index={i}
+            aria-label={`Perbesar ${img.alt}`}
+          >
+            <img src={img.src} alt={img.alt} loading="lazy" />
+            <span class="gallery__zoom-icon">🔍</span>
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="lightbox__close" id="lightboxClose" aria-label="Tutup lightbox">&times;</button>
+    <button class="lightbox__nav lightbox__prev" id="lightboxPrev" aria-label="Gambar sebelumnya">&#10094;</button>
+    <img src="" alt="" class="lightbox__image" id="lightboxImage" />
+    <button class="lightbox__nav lightbox__next" id="lightboxNext" aria-label="Gambar berikutnya">&#10095;</button>
+  </div>
+</section>
+
+<style>
+  .gallery__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+
+  .gallery__empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 40px 0;
+  }
+
+  .gallery__item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .gallery__item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+  }
+
+  .gallery__item:hover img {
+    transform: scale(1.1);
+  }
+
+  .gallery__zoom-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: rgba(15, 23, 42, 0.35);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .gallery__item:hover .gallery__zoom-icon {
+    opacity: 1;
+  }
+
+  @media (max-width: 900px) {
+    .gallery__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 500px) {
+    .gallery__grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+  }
+
+  /* -----------------------------------------------------------
+     Lightbox
+  ----------------------------------------------------------- */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base);
+  }
+
+  .lightbox.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .lightbox__image {
+    max-width: 85vw;
+    max-height: 82vh;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .lightbox__close {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    font-size: 2.2rem;
+    color: var(--color-white);
+    line-height: 1;
+  }
+
+  .lightbox__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.4rem;
+    color: var(--color-white);
+    background: rgba(255, 255, 255, 0.12);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast);
+  }
+
+  .lightbox__nav:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .lightbox__prev { left: 24px; }
+  .lightbox__next { right: 24px; }
+
+  @media (max-width: 600px) {
+    .lightbox__nav {
+      width: 40px;
+      height: 40px;
+    }
+    .lightbox__prev { left: 10px; }
+    .lightbox__next { right: 10px; }
+  }
+</style>
+
+<script>
+  // ===========================================================
+  // Lightbox sederhana — Vanilla JavaScript
+  // ===========================================================
+  const items = Array.from(document.querySelectorAll('.gallery__item'));
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImage = document.getElementById('lightboxImage');
+  const closeBtn = document.getElementById('lightboxClose');
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+
+  let currentIndex = 0;
+
+  function openLightbox(index) {
+    currentIndex = index;
+    const img = items[index]?.querySelector('img');
+    if (img && lightboxImage) {
+      lightboxImage.src = img.src;
+      lightboxImage.alt = img.alt;
+    }
+    lightbox?.classList.add('is-open');
+    lightbox?.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox?.classList.remove('is-open');
+    lightbox?.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function showRelative(offset) {
+    currentIndex = (currentIndex + offset + items.length) % items.length;
+    openLightbox(currentIndex);
+  }
+
+  items.forEach((item, index) => {
+    item.addEventListener('click', () => openLightbox(index));
+  });
+
+  closeBtn?.addEventListener('click', closeLightbox);
+  prevBtn?.addEventListener('click', () => showRelative(-1));
+  nextBtn?.addEventListener('click', () => showRelative(1));
+
+  lightbox?.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox?.classList.contains('is-open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') showRelative(-1);
+    if (e.key === 'ArrowRight') showRelative(1);
+  });
+</script>

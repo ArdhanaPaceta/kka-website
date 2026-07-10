@@ -1,0 +1,32 @@
+---
+// =============================================================
+// pages/index.astro — Beranda
+// =============================================================
+import MainLayout from '../layouts/MainLayout.astro';
+import Hero from '../components/Hero.astro';
+import About from '../components/About.astro';
+import Information from '../components/Information.astro';
+import CompetitionCategory from '../components/CompetitionCategory.astro';
+import RegistrationFlow from '../components/RegistrationFlow.astro';
+import Schedule from '../components/Schedule.astro';
+import Gallery from '../components/Gallery.astro';
+import BlogPreview from '../components/BlogPreview.astro';
+import FAQ from '../components/FAQ.astro';
+import Contact from '../components/Contact.astro';
+---
+
+<MainLayout
+  title="Beranda"
+  description="Kompetisi Kompetensi Akademik (KKA) — ajang kompetisi akademik untuk jenjang SD, SMP, dan SMK. Daftarkan sekolahmu sekarang."
+>
+  <Hero />
+  <About />
+  <Information />
+  <CompetitionCategory />
+  <RegistrationFlow />
+  <Schedule />
+  <Gallery />
+  <BlogPreview />
+  <FAQ />
+  <Contact />
+</MainLayout>

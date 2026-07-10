@@ -1,0 +1,81 @@
+---
+// =============================================================
+// layouts/MainLayout.astro
+// Layout utama: menangani <head>, font, dan struktur dasar HTML
+// =============================================================
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+export interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'Kompetisi Kompetensi Akademik (KKA) — ajang kompetisi akademik untuk jenjang SD, SMP, dan SMK.',
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/images/logo.png" />
+    <title>{title} | Kompetisi Kompetensi Akademik</title>
+
+    <!-- Preconnect ke Google Fonts untuk performa -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body>
+    <Navbar />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+
+    <script>
+      // ===========================================================
+      // Scroll reveal global — mengamati semua elemen ber-class
+      // "reveal" dan menambahkan class "in-view" ketika masuk viewport
+      // ===========================================================
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in-view');
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+
+      document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+      // ===========================================================
+      // Button ripple effect — berlaku untuk semua elemen ber-class "btn"
+      // ===========================================================
+      document.querySelectorAll('.btn').forEach((btn) => {
+        btn.addEventListener('click', function (e) {
+          const button = e.currentTarget as HTMLElement;
+          const rect = button.getBoundingClientRect();
+          const ripple = document.createElement('span');
+          const size = Math.max(rect.width, rect.height);
+
+          ripple.className = 'ripple';
+          ripple.style.width = ripple.style.height = `${size}px`;
+          ripple.style.left = `${(e as MouseEvent).clientX - rect.left - size / 2}px`;
+          ripple.style.top = `${(e as MouseEvent).clientY - rect.top - size / 2}px`;
+
+          button.appendChild(ripple);
+          setTimeout(() => ripple.remove(), 600);
+        });
+      });
+    </script>
+  </body>
+</html>

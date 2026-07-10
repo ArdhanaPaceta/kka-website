@@ -1,0 +1,562 @@
+---
+import { supabase } from '../../lib/supabase';
+
+const { data: kartuList } = await supabase
+  .from('informasi_kartu')
+  .select('*')
+  .order('urutan', { ascending: true });
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola Informasi</h2>
+      <p class="form-hint">
+        Atur kartu-kartu informasi (Jenjang, Tanggal Penting, Lokasi, Persyaratan, dll) yang tampil
+        di halaman publik.
+      </p>
+    </div>
+    <button type="button" id="btnTambahKartu" class="btn-primary btn-add">
+      <span class="plus-icon">+</span> Tambah Kartu
+    </button>
+  </div>
+
+  <!-- LIST KARTU -->
+  <div id="infoList" class="info-list">
+    {(kartuList ?? []).length === 0 ? (
+      <div class="empty-state">
+        <span class="empty-icon">📋</span>
+        <p>Belum ada kartu informasi.</p>
+        <span class="empty-sub">Klik tombol "Tambah Kartu" untuk mulai.</span>
+      </div>
+    ) : (
+      kartuList.map((kartu) => (
+        <div class="info-item" data-id={kartu.id}>
+          <div class="info-item__content">
+            <div class="info-item__header">
+              <span class="info-item__icon">{kartu.icon || '📄'}</span>
+              <strong>{kartu.label}</strong>
+              <span class="badge-urutan">Urutan #{kartu.urutan}</span>
+            </div>
+            <ul class="info-item__list">
+              {(kartu.items ?? []).map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div class="info-item__actions">
+            <button
+              type="button"
+              class="btn-edit"
+              data-id={kartu.id}
+              data-label={kartu.label}
+              data-icon={kartu.icon || ''}
+              data-urutan={kartu.urutan}
+              data-items={JSON.stringify(kartu.items || [])}
+            >Edit</button>
+            <button type="button" class="btn-delete" data-id={kartu.id}>Hapus</button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  <!-- FORM TAMBAH/EDIT -->
+  <div id="infoForm" class="info-form hidden">
+    <hr class="form-divider" />
+    <h3 id="infoFormTitle">Tambah Kartu Informasi</h3>
+    <input type="hidden" id="infoId" />
+
+    <div class="form-grid-2">
+      <div class="field">
+        <label for="iLabel">Label / Judul Kartu</label>
+        <input type="text" id="iLabel" placeholder="Contoh: Jenjang" required />
+      </div>
+      <div class="field">
+        <label for="iUrutan">Urutan Tampil</label>
+        <input type="number" id="iUrutan" placeholder="0" value="0" required />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="iIcon">Icon (emoji)</label>
+      <input type="text" id="iIcon" placeholder="📚" maxlength="4" />
+      <small class="field-hint">Contoh: 📚, 🗓️, 📍, ✅ (opsional)</small>
+    </div>
+
+    <div class="field">
+      <label for="iItems">Daftar Poin (satu poin per baris)</label>
+      <textarea
+        id="iItems"
+        rows="5"
+        placeholder="Sekolah Dasar (SD)&#10;Sekolah Menengah Pertama (SMP)&#10;Sekolah Menengah Kejuruan (SMK)"
+        required
+      ></textarea>
+      <small class="field-hint">Setiap baris menjadi satu poin dalam daftar.</small>
+    </div>
+
+    <p class="status-text" id="iStatus"></p>
+
+    <div class="form-actions">
+      <button type="button" id="btnBatalKartu" class="btn-outline">Batal</button>
+      <button type="submit" class="btn-primary">Simpan Kartu</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  const btnTambahKartu = document.getElementById('btnTambahKartu');
+  const infoForm = document.getElementById('infoForm');
+  const btnBatalKartu = document.getElementById('btnBatalKartu');
+  const infoFormTitle = document.getElementById('infoFormTitle');
+  const infoId = document.getElementById('infoId');
+  const iStatus = document.getElementById('iStatus');
+  const iSubmitBtn = infoForm.querySelector('button[type="submit"]');
+
+  function resetInfoForm() {
+    infoForm.reset();
+    infoId.value = '';
+    infoFormTitle.textContent = 'Tambah Kartu Informasi';
+    document.getElementById('iUrutan').value = 0;
+    iStatus.textContent = '';
+    iStatus.style.color = '';
+  }
+
+  btnTambahKartu.addEventListener('click', () => {
+    resetInfoForm();
+    infoForm.classList.remove('hidden');
+    infoForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('iLabel').focus();
+  });
+
+  btnBatalKartu.addEventListener('click', () => {
+    infoForm.classList.add('hidden');
+    resetInfoForm();
+  });
+
+  // Edit buttons
+  document.querySelectorAll('.btn-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      infoId.value = btn.dataset.id;
+      document.getElementById('iLabel').value = btn.dataset.label;
+      document.getElementById('iIcon').value = btn.dataset.icon || '';
+      document.getElementById('iUrutan').value = btn.dataset.urutan;
+      
+      const items = JSON.parse(btn.dataset.items || '[]');
+      document.getElementById('iItems').value = items.join('\n');
+      
+      infoFormTitle.textContent = 'Edit Kartu Informasi';
+      infoForm.classList.remove('hidden');
+      infoForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Delete buttons
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Yakin ingin menghapus kartu informasi ini?')) return;
+
+      const { error } = await supabase
+        .from('informasi_kartu')
+        .delete()
+        .eq('id', btn.dataset.id);
+
+      if (error) {
+        alert('Gagal menghapus: ' + error.message);
+      } else {
+        window.location.reload();
+      }
+    });
+  });
+
+  // Form submit
+  infoForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const label = document.getElementById('iLabel').value.trim();
+    const icon = document.getElementById('iIcon').value.trim();
+    const urutan = parseInt(document.getElementById('iUrutan').value || '0', 10);
+    const itemsRaw = document.getElementById('iItems').value;
+
+    const items = itemsRaw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    if (!label) {
+      iStatus.textContent = '⚠️ Label/judul kartu wajib diisi.';
+      iStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    if (items.length === 0) {
+      iStatus.textContent = '⚠️ Isi minimal satu poin.';
+      iStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    iSubmitBtn.disabled = true;
+    iStatus.textContent = '⏳ Menyimpan...';
+    iStatus.style.color = '#2563eb';
+
+    const payload = { label, icon: icon || null, urutan, items };
+    let error;
+
+    if (infoId.value) {
+      ({ error } = await supabase.from('informasi_kartu').update(payload).eq('id', infoId.value));
+    } else {
+      ({ error } = await supabase.from('informasi_kartu').insert(payload));
+    }
+
+    if (error) {
+      iStatus.textContent = '❌ Gagal: ' + error.message;
+      iStatus.style.color = '#dc2626';
+    } else {
+      iStatus.textContent = '✅ Kartu berhasil ' + (infoId.value ? 'diperbarui' : 'ditambahkan') + '!';
+      iStatus.style.color = '#16a34a';
+      setTimeout(() => window.location.reload(), 1000);
+    }
+
+    iSubmitBtn.disabled = false;
+  });
+</script>
+
+<style>
+  /* ----- CARD UTAMA ----- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* ----- TOMBOL ----- */
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-add .plus-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #d1d9e6;
+    color: #475569;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-outline:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  /* ----- INFO LIST ----- */
+  .info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin: 1.25rem 0 1.5rem 0;
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0.9rem 1rem;
+    background: #fafcff;
+    border-radius: 10px;
+    border: 1px solid #eef2f6;
+    transition: border-color 0.2s, background 0.2s;
+    gap: 0.75rem;
+  }
+  .info-item:hover {
+    background: #f8fafc;
+    border-color: #d9e2ef;
+  }
+
+  .info-item__content {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .info-item__header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 0.4rem;
+  }
+  .info-item__header strong {
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  .info-item__icon {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .badge-urutan {
+    background: #eef2ff;
+    color: #2563eb;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.7rem;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  .info-item__list {
+    margin: 0.2rem 0 0 0;
+    padding-left: 1.5rem;
+    font-size: 0.9rem;
+    color: #475569;
+    list-style-type: disc;
+  }
+  .info-item__list li {
+    margin-bottom: 0.1rem;
+    line-height: 1.4;
+  }
+
+  .info-item__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: transparent;
+  }
+
+  .btn-edit {
+    color: #2563eb;
+    background: #eff6ff;
+  }
+  .btn-edit:hover {
+    background: #dbeafe;
+  }
+
+  .btn-delete {
+    color: #dc2626;
+    background: #fef2f2;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+  }
+  .empty-icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ----- FORM TOGGLE ----- */
+  .info-form {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    animation: slideDown 0.3s ease forwards;
+  }
+  .info-form.hidden {
+    display: none;
+  }
+
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 0.5rem 0 1.25rem 0;
+  }
+
+  .info-form h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 1.25rem 0;
+  }
+
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+
+  .field-hint {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+  }
+
+  .status-text {
+    font-weight: 500;
+    font-size: 0.95rem;
+    min-height: 1.8rem;
+    margin: 0.5rem 0;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* ----- RESPONSIF ----- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-add {
+      justify-content: center;
+      width: 100%;
+    }
+    .form-grid-2 {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .info-item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .info-item__actions {
+      justify-content: flex-end;
+    }
+    .form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-primary {
+      justify-content: center;
+    }
+  }
+</style>

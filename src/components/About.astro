@@ -1,0 +1,125 @@
+---
+// =============================================================
+// components/About.astro
+// Section "Tentang Kompetisi" — deskripsi singkat + kartu keunggulan
+// Data diambil dari tabel `keunggulan` di Supabase (build time)
+// =============================================================
+import { supabase } from '../lib/supabase';
+
+const { data: values, error } = await supabase
+  .from('keunggulan')
+  .select('*')
+  .order('urutan', { ascending: true });
+
+if (error) {
+  console.error('Gagal memuat data keunggulan:', error.message);
+}
+
+const items = values ?? [];
+---
+<section class="about section" id="tentang">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-eyebrow">Tentang Kompetisi</span>
+
+      <h2 class="section-title">
+        Mengenal Lebih Dekat Kompetisi Kompetensi Akademik
+      </h2>
+
+      <p class="section-subtitle mx-auto">
+        Kompetisi Kompetensi Akademik (KKA) adalah ajang tahunan...
+      </p>
+    </div>
+
+    <div class="about__grid">
+      {items.map((item, i) => (
+        <div
+          class:list={[
+            "about__card",
+            "card",
+            "reveal",
+            `reveal-delay-${(i % 4) + 1}`,
+          ]}
+        >
+          {item.gambar_url ? (
+            <img
+              src={item.gambar_url}
+              alt={item.judul}
+              class="about__icon-img"
+              loading="lazy"
+            />
+          ) : (
+            <span class="about__icon about__icon--empty" />
+          )}
+          <h3 class="about__card-title">{item.judul}</h3>
+          <p class="about__card-desc">{item.deskripsi}</p>
+        </div>
+      ))}
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .about__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .about__card {
+    padding: 36px 28px;
+    text-align: left;
+  }
+
+  .section-header-image {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    margin: 0 auto 2rem;
+    border-radius: 16px;
+    object-fit: cover;
+  }
+
+  .about__icon,
+  .about__icon-img {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+  }
+
+  .about__icon-img {
+    object-fit: cover;
+  }
+
+  .about__icon--empty {
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  .about__card-title {
+    font-size: 1.15rem;
+    margin-bottom: 10px;
+  }
+
+  .about__card-desc {
+    color: var(--color-gray);
+    font-size: 0.92rem;
+  }
+
+  @media (max-width: 1024px) {
+    .about__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .about__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

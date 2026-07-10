@@ -1,0 +1,256 @@
+---
+import { supabase } from '../lib/supabase';
+
+const { data: contact } = await supabase.from('contact_info').select('*').single();
+---
+
+<section class="contact section" id="kontak">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">Kontak</span>
+      <h2 class="section-title">Hubungi Kami</h2>
+      <p class="section-subtitle mx-auto">
+        Ada pertanyaan seputar kompetisi? Kirimkan pesan Anda atau hubungi kami melalui kontak
+        di bawah ini.
+      </p>
+    </div>
+
+    <div class="contact__grid">
+      <form class="contact__form reveal" id="contactForm" novalidate>
+        <div class="contact__field">
+          <label for="nama">Nama</label>
+          <input type="text" id="nama" name="nama" placeholder="Masukkan nama lengkap Anda" required />
+        </div>
+
+        <div class="contact__field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="nama@email.com" required />
+        </div>
+
+        <div class="contact__field">
+          <label for="pesan">Pesan</label>
+          <textarea id="pesan" name="pesan" rows="5" placeholder="Tulis pesan Anda di sini..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary contact__submit">Kirim Pesan</button>
+
+        <p class="contact__status" id="contactStatus" role="status"></p>
+      </form>
+
+      <div class="contact__info reveal reveal-delay-2">
+        <div class="contact__info-item">
+          <span class="contact__info-icon">📍</span>
+          <div>
+            <h4>Alamat</h4>
+            <p>{contact?.alamat}</p>
+          </div>
+        </div>
+
+        <div class="contact__info-item">
+          <span class="contact__info-icon">✉️</span>
+          <div>
+            <h4>Email</h4>
+            <p>{contact?.email}</p>
+          </div>
+        </div>
+
+        <div class="contact__info-item">
+          <span class="contact__info-icon">💬</span>
+          <div>
+            <h4>WhatsApp</h4>
+            <p>{contact?.whatsapp}</p>
+          </div>
+        </div>
+
+        <div class="contact__map">
+          <iframe
+            title="Lokasi Kompetisi Kompetensi Akademik"
+            src={contact?.map_embed_url}
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+  import { supabase } from '../lib/supabase';
+
+  const form = document.getElementById('contactForm');
+  const status = document.getElementById('contactStatus');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = 'Mengirim...';
+
+    const payload = {
+      nama: document.getElementById('nama').value,
+      email: document.getElementById('email').value,
+      pesan: document.getElementById('pesan').value,
+    };
+
+    const { error } = await supabase.from('contact_messages').insert(payload);
+
+    if (error) {
+      status.textContent = 'Gagal mengirim pesan: ' + error.message;
+      status.style.color = '#dc2626';
+    } else {
+      status.textContent = 'Pesan berhasil dikirim, terima kasih!';
+      status.style.color = '#16a34a';
+      form.reset();
+    }
+  });
+</script>
+
+<style>
+  .contact__grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  .contact__form {
+    background: var(--color-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .contact__field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .contact__field label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-dark);
+  }
+
+  .contact__field input,
+  .contact__field textarea {
+    padding: 13px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-white);
+    color: var(--color-dark);
+    resize: vertical;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .contact__field input:focus,
+  .contact__field textarea:focus {
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .contact__submit {
+    align-self: flex-start;
+  }
+
+  .contact__status {
+    font-size: 0.88rem;
+    color: var(--color-secondary);
+    min-height: 1.2em;
+  }
+
+  .contact__info {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .contact__info-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .contact__info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background: rgba(30, 58, 138, 0.08);
+    border-radius: var(--radius-sm);
+    font-size: 1.1rem;
+  }
+
+  .contact__info-item h4 {
+    font-size: 0.98rem;
+    margin-bottom: 4px;
+  }
+
+  .contact__info-item p {
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
+  .contact__map {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    aspect-ratio: 16 / 11;
+  }
+
+  .contact__map iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  @media (max-width: 900px) {
+    .contact__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // ===========================================================
+  // Contact Form — Vanilla JavaScript
+  // Catatan: submit ke Supabase dapat diaktifkan dengan meng-import
+  // helper `kirimPesanKontak` dari src/lib/supabase.ts
+  // ===========================================================
+  const form = document.getElementById('contactForm') as HTMLFormElement | null;
+  const statusEl = document.getElementById('contactStatus');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const nama = String(formData.get('nama') || '').trim();
+    const email = String(formData.get('email') || '').trim();
+    const pesan = String(formData.get('pesan') || '').trim();
+
+    if (!nama || !email || !pesan) {
+      if (statusEl) statusEl.textContent = 'Mohon lengkapi seluruh kolom terlebih dahulu.';
+      return;
+    }
+
+    if (statusEl) statusEl.textContent = 'Mengirim pesan...';
+
+    try {
+      // Contoh integrasi Supabase (aktifkan setelah lib/supabase.ts dikonfigurasi):
+      //
+      // import { kirimPesanKontak } from '../lib/supabase';
+      // await kirimPesanKontak({ nama, email, pesan });
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      if (statusEl) statusEl.textContent = 'Pesan berhasil dikirim. Terima kasih!';
+      form.reset();
+    } catch (err) {
+      if (statusEl) statusEl.textContent = 'Terjadi kesalahan. Silakan coba lagi.';
+    }
+  });
+</script>

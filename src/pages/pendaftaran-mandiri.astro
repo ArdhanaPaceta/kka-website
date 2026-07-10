@@ -1,0 +1,862 @@
+---
+// src/pages/pendaftaran-form.astro
+import MainLayout from '../layouts/MainLayout.astro';
+---
+
+<MainLayout title="Form Pendaftaran KKA">
+  <section class="form-page">
+    <div class="container container--narrow">
+      <!-- Header -->
+      <div class="form-header">
+        <span class="form-badge">Pendaftaran KKA 2026</span>
+        <h1 class="form-title">Formulir Pendaftaran Mandiri</h1>
+        <p class="form-subtitle">
+          Kompetisi Kompetensi Akademik tingkat kabupaten. 
+          Isi data dengan lengkap dan benar.
+        </p>
+      </div>
+
+      <!-- Form Card -->
+      <div class="form-card" id="formCard">
+        <!-- FORM -->
+        <form id="pendaftaranForm" class="reg-form" id="pendaftaranForm">
+          <!-- Bagian 1: Wilayah -->
+          <fieldset class="form-section">
+            <legend class="section-legend">📍 Data Wilayah</legend>
+            
+            <div class="form-group">
+              <label for="kabupaten">Kabupaten <span class="required">*</span></label>
+              <select id="kabupaten" required>
+                <option value="">-- Memuat data --</option>
+              </select>
+              <span class="field-hint">Pilih kabupaten tempat sekolah Anda berada</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="kecamatan">Kecamatan <span class="required">*</span></label>
+                <select id="kecamatan" disabled required>
+                  <option value="">-- Pilih Kecamatan --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sekolah">Asal Sekolah <span class="required">*</span></label>
+                <select id="sekolah" disabled required>
+                  <option value="">-- Pilih Sekolah --</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Bagian 2: Data Siswa -->
+          <fieldset class="form-section">
+            <legend class="section-legend">👤 Data Siswa</legend>
+            
+            <div class="form-group">
+              <label for="nama_siswa">Nama Lengkap Siswa <span class="required">*</span></label>
+              <input type="text" id="nama_siswa" placeholder="Contoh: Ahmad Fauzi" required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nisn">NISN <span class="required">*</span></label>
+                <input type="text" id="nisn" placeholder="10 digit NISN" pattern="\d{10}" maxlength="10" required />
+                <span class="field-hint">Nomor Induk Siswa Nasional (10 digit)</span>
+              </div>
+              <div class="form-group">
+                <label for="no_wa">WhatsApp Orang Tua/Wali <span class="required">*</span></label>
+                <input type="tel" id="no_wa" placeholder="081234567890" required />
+                <span class="field-hint">Gunakan nomor yang aktif</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="gender">Jenis Kelamin <span class="required">*</span></label>
+                <select id="gender" required>
+                  <option value="">-- Pilih --</option>
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="kelas">Kelas <span class="required">*</span></label>
+                <select id="kelas" required>
+                  <option value="">-- Pilih Kelas --</option>
+                  <option value="1">1</option><option value="2">2</option>
+                  <option value="3">3</option><option value="4">4</option>
+                  <option value="5">5</option><option value="6">6</option>
+                  <option value="7">7</option><option value="8">8</option>
+                  <option value="9">9</option><option value="10">10</option>
+                  <option value="11">11</option><option value="12">12</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="jenjang">Jenjang <span class="required">*</span></label>
+                <select id="jenjang" required>
+                  <option value="">-- Pilih Jenjang --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="biaya">Biaya Pendaftaran</label>
+                <input type="text" id="biaya" readonly placeholder="Akan muncul otomatis" class="biaya-field" />
+                <span class="field-hint">Biaya ditentukan berdasarkan jenjang sekolah</span>
+              </div>
+            </div>
+          </fieldset>
+
+          <p id="formError" class="form-error" style="display:none;"></p>
+          
+          <button type="submit" id="submitBtn" class="btn-submit">
+            <span class="btn-text">Daftar Sekarang</span>
+            <span class="btn-loading" style="display:none;">Memproses...</span>
+          </button>
+        </form>
+
+        <!-- ===== HASIL PENDAFTARAN (muncul setelah submit) ===== -->
+        <div id="resultContainer" style="display:none;">
+          <div class="divider"></div>
+          
+          <div class="result-header">
+            <span class="result-badge">✅ Pendaftaran Berhasil</span>
+            <h2 class="result-title">Kode Pendaftaran Anda</h2>
+          </div>
+
+          <!-- Kode Booking -->
+          <div class="kode-box">
+            <span class="kode-label">Kode Booking</span>
+            <div class="kode-wrapper">
+              <span class="kode-value" id="resultKode">-</span>
+              <button id="copyKodeBtn" class="btn-copy-kode">Salin</button>
+            </div>
+          </div>
+
+          <!-- Ringkasan -->
+          <div class="result-summary">
+            <div class="result-item">
+              <span class="result-item-label">Nama Siswa</span>
+              <span class="result-item-value" id="resultNama">-</span>
+            </div>
+            <div class="result-item">
+              <span class="result-item-label">Nominal</span>
+              <span class="result-item-value nominal" id="resultNominal">-</span>
+            </div>
+            <div class="result-item">
+              <span class="result-item-label">Status</span>
+              <span class="result-item-value status-badge status-badge-menunggu-pembayaran">Menunggu Pembayaran</span>
+            </div>
+          </div>
+
+          <p class="result-note">
+            Simpan kode booking ini untuk keperluan verifikasi dan pembayaran.
+          </p>
+
+          <div class="result-actions">
+            <a id="resultWaButton" href="#" target="_blank" class="btn-wa">📱 Konfirmasi via WhatsApp</a>
+            <button id="resetFormBtn" class="btn-secondary">← Daftar Lagi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</MainLayout>
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  // --- DOM Elements ---
+  const form = document.getElementById('pendaftaranForm');
+  const formError = document.getElementById('formError');
+  const submitBtn = document.getElementById('submitBtn');
+  const btnText = submitBtn.querySelector('.btn-text');
+  const btnLoading = submitBtn.querySelector('.btn-loading');
+  const resultContainer = document.getElementById('resultContainer');
+
+  const kabupatenSelect = document.getElementById('kabupaten');
+  const kecamatanSelect = document.getElementById('kecamatan');
+  const jenjangSelect = document.getElementById('jenjang');
+  const sekolahSelect = document.getElementById('sekolah');
+  const biayaInput = document.getElementById('biaya');
+
+  const resultKode = document.getElementById('resultKode');
+  const resultNama = document.getElementById('resultNama');
+  const resultNominal = document.getElementById('resultNominal');
+  const resultWaButton = document.getElementById('resultWaButton');
+  const resetFormBtn = document.getElementById('resetFormBtn');
+
+  const ADMIN_WA_NUMBER = '6282233730246';
+
+  // --- Load Kabupaten ---
+  async function loadKabupaten() {
+    try {
+      const { data, error } = await supabase
+        .from('kabupaten')
+        .select('id, nama')
+        .order('nama', { ascending: true });
+      if (error) throw error;
+      kabupatenSelect.innerHTML = '<option value="">-- Pilih Kabupaten --</option>';
+      data.forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k.id;
+        opt.textContent = k.nama;
+        kabupatenSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('Gagal load kabupaten:', err);
+      kabupatenSelect.innerHTML = '<option value="">Gagal memuat data</option>';
+    }
+  }
+
+  // --- Load Kecamatan ---
+  kabupatenSelect.addEventListener('change', async () => {
+    const kabId = kabupatenSelect.value;
+    kecamatanSelect.disabled = true;
+    kecamatanSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
+    sekolahSelect.disabled = true;
+    sekolahSelect.innerHTML = '<option value="">-- Pilih Sekolah --</option>';
+    biayaInput.value = '';
+    if (!kabId) return;
+    try {
+      const { data, error } = await supabase
+        .from('kecamatan')
+        .select('id, nama')
+        .eq('kabupaten_id', kabId)
+        .order('nama', { ascending: true });
+      if (error) throw error;
+      if (data.length) {
+        kecamatanSelect.disabled = false;
+        data.forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = k.id;
+          opt.textContent = k.nama;
+          kecamatanSelect.appendChild(opt);
+        });
+      }
+    } catch (err) {
+      console.error('Gagal load kecamatan:', err);
+    }
+  });
+
+  // --- Load Jenjang ---
+  async function loadJenjang() {
+    try {
+      const { data, error } = await supabase
+        .from('biaya_jenjang')
+        .select('id, jenjang, nominal')
+        .order('jenjang', { ascending: true });
+      if (error) throw error;
+      jenjangSelect.innerHTML = '<option value="">-- Pilih Jenjang --</option>';
+      data.forEach(j => {
+        const opt = document.createElement('option');
+        opt.value = j.id;
+        opt.textContent = j.jenjang;
+        opt.dataset.nominal = j.nominal;
+        jenjangSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('Gagal load jenjang:', err);
+      jenjangSelect.innerHTML = '<option value="">Gagal memuat data</option>';
+    }
+  }
+
+  // --- Load Sekolah ---
+  kecamatanSelect.addEventListener('change', async () => {
+    const kecId = kecamatanSelect.value;
+    sekolahSelect.disabled = true;
+    sekolahSelect.innerHTML = '<option value="">-- Pilih Sekolah --</option>';
+    biayaInput.value = '';
+    if (!kecId) return;
+    try {
+      const { data, error } = await supabase
+        .from('sekolah')
+        .select(`
+          id,
+          nama,
+          biaya_jenjang_id,
+          biaya_jenjang:biaya_jenjang_id (jenjang, nominal)
+        `)
+        .eq('kecamatan_id', kecId)
+        .order('nama', { ascending: true });
+      if (error) throw error;
+      if (data.length) {
+        sekolahSelect.disabled = false;
+        data.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.nama;
+          opt.dataset.biaya = s.biaya_jenjang?.nominal || 0;
+          sekolahSelect.appendChild(opt);
+        });
+      }
+    } catch (err) {
+      console.error('Gagal load sekolah:', err);
+    }
+  });
+
+  // --- Update biaya ---
+  sekolahSelect.addEventListener('change', () => {
+    const selected = sekolahSelect.options[sekolahSelect.selectedIndex];
+    const biaya = selected?.dataset?.biaya || 0;
+    biayaInput.value = biaya ? `Rp ${parseInt(biaya).toLocaleString('id-ID')}` : '';
+  });
+
+  // --- Reset form (tampilkan form, sembunyikan result) ---
+  function resetForm() {
+    form.style.display = 'block';
+    resultContainer.style.display = 'none';
+    form.reset();
+    // Reset dropdown
+    kecamatanSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
+    kecamatanSelect.disabled = true;
+    sekolahSelect.innerHTML = '<option value="">-- Pilih Sekolah --</option>';
+    sekolahSelect.disabled = true;
+    biayaInput.value = '';
+    // Reset button
+    btnText.style.display = 'inline';
+    btnLoading.style.display = 'none';
+    submitBtn.disabled = false;
+    formError.style.display = 'none';
+    // Scroll ke atas
+    document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  resetFormBtn?.addEventListener('click', resetForm);
+
+  // --- Submit ---
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    formError.style.display = 'none';
+
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    submitBtn.disabled = true;
+
+    const payload = {
+      nama_siswa: document.getElementById('nama_siswa').value.trim(),
+      nisn: document.getElementById('nisn').value.trim(),
+      no_wa: document.getElementById('no_wa').value.trim(),
+      gender: document.getElementById('gender').value,
+      kelas: document.getElementById('kelas').value,
+      kabupaten_id: kabupatenSelect.value,
+      kecamatan_id: kecamatanSelect.value,
+      sekolah_id: sekolahSelect.value,
+    };
+
+    // Validasi
+    for (let key in payload) {
+      if (!payload[key]) {
+        formError.textContent = 'Semua field wajib diisi.';
+        formError.style.display = 'block';
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+        submitBtn.disabled = false;
+        return;
+      }
+    }
+
+    try {
+      const tahun = new Date().getFullYear();
+      const { count, error: countError } = await supabase
+        .from('pendaftar')
+        .select('*', { count: 'exact', head: true });
+      if (countError) throw new Error(countError.message);
+
+      const nomorUrut = String((count || 0) + 1).padStart(4, '0');
+      const kode = `KKA-${tahun}-${nomorUrut}`;
+      payload.kode_pendaftaran = kode;
+      payload.status = 'Menunggu Pembayaran';
+
+      // Ambil nama teks dari dropdown SEBELUM insert, supaya bisa dipakai
+      // untuk kirim ke Google Sheet maupun untuk tampilan hasil.
+      const namaKab = kabupatenSelect.options[kabupatenSelect.selectedIndex].text;
+      const namaJenjang = jenjangSelect.options[jenjangSelect.selectedIndex].text;
+      const namaSekolah = sekolahSelect.options[sekolahSelect.selectedIndex].text;
+      const namaKec = kecamatanSelect.options[kecamatanSelect.selectedIndex].text;
+
+      const { error } = await supabase.from('pendaftar').insert(payload);
+      if (error) throw new Error(error.message);
+
+    try {
+      await fetch(import.meta.env.PUBLIC_GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Apps Script tidak kirim header CORS, jadi response tidak bisa dibaca browser
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          kode_pendaftaran: payload.kode_pendaftaran,
+          nama_siswa: payload.nama_siswa,
+          nisn: payload.nisn,
+          no_wa: payload.no_wa,
+          gender: payload.gender,
+          kelas: payload.kelas,
+          kabupaten: namaKab,
+          kecamatan: namaKec,
+          sekolah: namaSekolah,
+          jenjang: namaJenjang,
+          status: payload.status,
+          created_at: new Date().toISOString(),
+        }),
+      });
+      console.log('Request ke Google Sheet terkirim (response tidak bisa dibaca karena no-cors, ini normal)');
+    } catch (gsErr) {
+      console.warn('Gagal sync ke Google Sheet (data tetap tersimpan di Supabase):', gsErr);
+    }
+
+      // --- Tampilkan hasil di bawah form ---
+      const nominal = biayaInput.value || 'Rp 0';
+      const nama = payload.nama_siswa;
+
+      resultKode.textContent = kode;
+      resultNama.textContent = nama;
+      resultNominal.textContent = nominal;
+
+      // WA button
+      const pesan = encodeURIComponent(
+        `Halo Admin KKA, saya sudah mendaftar:\n\n` +
+        `Kode: ${kode}\n` +
+        `Nama: ${nama}\n` +
+        `NISN: ${payload.nisn}\n` +
+        `Jenjang: ${namaJenjang}\n` +
+        `Sekolah: ${namaSekolah}\n` +
+        `Kabupaten: ${namaKab}\n\n` +
+        `Mohon info untuk pembayaran. Terima kasih.`
+      );
+      resultWaButton.href = `https://wa.me/${ADMIN_WA_NUMBER}?text=${pesan}`;
+
+      // Sembunyikan form, tampilkan result
+      form.style.display = 'none';
+      resultContainer.style.display = 'block';
+      document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
+
+    } catch (err) {
+      formError.textContent = 'Gagal: ' + err.message;
+      formError.style.display = 'block';
+      btnText.style.display = 'inline';
+      btnLoading.style.display = 'none';
+      submitBtn.disabled = false;
+    }
+  });
+
+  // --- Copy Kode ---
+  document.getElementById('copyKodeBtn')?.addEventListener('click', () => {
+    const kode = resultKode.textContent;
+    if (kode && kode !== '-') {
+      navigator.clipboard.writeText(kode).then(() => {
+        const btn = document.getElementById('copyKodeBtn');
+        btn.textContent = '✅ Tersalin';
+        setTimeout(() => btn.textContent = 'Salin', 2000);
+      }).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = kode;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        const btn = document.getElementById('copyKodeBtn');
+        btn.textContent = '✅ Tersalin';
+        setTimeout(() => btn.textContent = 'Salin', 2000);
+      });
+    }
+  });
+
+  // --- Init ---
+  loadKabupaten();
+  loadJenjang();
+
+  // Deteksi reset dari URL (?reset=true)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('reset') === 'true') {
+    resetForm();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+</script>
+
+<style>
+  /* --- Global --- */
+  .container--narrow {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  .form-page {
+    padding: 120px 0 80px;
+    background: #f8fafc;
+    min-height: 100vh;
+  }
+
+  /* --- Header --- */
+  .form-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .form-badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #2563eb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 16px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .form-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+  }
+  .form-subtitle {
+    color: #64748b;
+    font-size: 1rem;
+    margin: 0 auto;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+
+  /* --- Form Card --- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid #edf2f7;
+    padding: 36px 40px;
+    transition: box-shadow 0.2s;
+  }
+
+  /* --- Form Sections --- */
+  .form-section {
+    border: none;
+    padding: 0;
+    margin: 0 0 28px 0;
+  }
+  .form-section:last-of-type {
+    margin-bottom: 24px;
+  }
+  .section-legend {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #0f172a;
+    padding: 0 0 12px 0;
+    border-bottom: 2px solid #f1f5f9;
+    width: 100%;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* --- Form Groups --- */
+  .form-group {
+    margin-bottom: 18px;
+  }
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #1e293b;
+    margin-bottom: 6px;
+  }
+  .required {
+    color: #dc2626;
+    font-weight: 700;
+  }
+  .field-hint {
+    display: block;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: #0f172a;
+    background: #ffffff;
+    transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
+  }
+  input:hover, select:hover:not(:disabled) {
+    border-color: #94a3b8;
+  }
+  input:disabled, select:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  input[readonly].biaya-field {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    font-weight: 600;
+    color: #0f172a;
+    cursor: default;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #b91c1c;
+    font-size: 0.9rem;
+    padding: 12px 16px;
+    margin: 16px 0 0 0;
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 12px;
+  }
+  .btn-submit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(37,99,235,0.3);
+  }
+  .btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* --- RESULT / KODE BOOKING --- */
+  .divider {
+    border-top: 2px solid #edf2f7;
+    margin: 8px 0 24px 0;
+  }
+
+  .result-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .result-badge {
+    display: inline-block;
+    background: #d1fae5;
+    color: #065f46;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 16px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .result-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .kode-box {
+    background: #eff6ff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .kode-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .kode-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .kode-value {
+    flex: 1;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #2563eb;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.06em;
+  }
+  .btn-copy-kode {
+    padding: 8px 20px;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .btn-copy-kode:hover {
+    background: #1d4ed8;
+  }
+
+  .result-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .result-item {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .result-item-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .result-item-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .result-item-value.nominal {
+    color: #2563eb;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  .status-badge-menunggu-pembayaran {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .result-note {
+    color: #64748b;
+    font-size: 0.85rem;
+    text-align: center;
+    margin: 0 0 20px 0;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .result-actions .btn-wa {
+    flex: 1;
+    display: inline-block;
+    text-align: center;
+    padding: 12px 20px;
+    background: #25D366;
+    color: #ffffff;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .result-actions .btn-wa:hover {
+    background: #1da851;
+  }
+  .result-actions .btn-secondary {
+    flex: 1;
+    display: inline-block;
+    text-align: center;
+    padding: 12px 20px;
+    background: transparent;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .result-actions .btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+  }
+
+  /* --- Responsive --- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 24px 20px;
+    }
+    .form-title {
+      font-size: 1.5rem;
+    }
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .form-page {
+      padding: 100px 0 60px;
+    }
+    .result-summary {
+      grid-template-columns: 1fr 1fr;
+    }
+    .kode-value {
+      font-size: 1.2rem;
+    }
+    .result-actions {
+      flex-direction: column;
+    }
+  }
+  @media (max-width: 480px) {
+    .form-card {
+      padding: 16px;
+    }
+    .result-summary {
+      grid-template-columns: 1fr;
+    }
+    .kode-wrapper {
+      flex-wrap: wrap;
+    }
+    .btn-copy-kode {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>

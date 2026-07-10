@@ -1,0 +1,127 @@
+---
+import { supabase } from '../lib/supabase';
+
+const { data: faqs } = await supabase
+  .from('faqs')
+  .select('*')
+  .order('urutan', { ascending: true });
+---
+
+<section class="faq section" id="faq">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-eyebrow">FAQ</span>
+      <h2 class="section-title">Pertanyaan yang Sering Diajukan</h2>
+      <p class="section-subtitle mx-auto">
+        Temukan jawaban atas pertanyaan umum seputar Kompetisi Kompetensi Akademik.
+      </p>
+    </div>
+
+    <div class="faq__list">
+      {(faqs ?? []).map((item, i) => (
+        <div class:list={['faq__item', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
+          <button class="faq__question" aria-expanded="false">
+            <span>{item.pertanyaan}</span>
+            <span class="faq__icon">+</span>
+          </button>
+          <div class="faq__answer">
+            <p>{item.jawaban}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq__list {
+    max-width: 800px;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .faq__item {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--color-white);
+  }
+
+  .faq__question {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    font-weight: 600;
+    font-size: 0.98rem;
+    text-align: left;
+    color: var(--color-dark);
+  }
+
+  .faq__icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--color-secondary);
+    font-size: 1.1rem;
+    transition: transform var(--transition-fast), background var(--transition-fast);
+  }
+
+  .faq__item.is-open .faq__icon {
+    transform: rotate(45deg);
+    background: var(--color-secondary);
+    color: var(--color-white);
+  }
+
+  .faq__answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--transition-base);
+  }
+
+  .faq__answer p {
+    padding: 0 24px 20px;
+    color: var(--color-gray);
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+</style>
+
+<script>
+  // ===========================================================
+  // Accordion FAQ — Vanilla JavaScript
+  // ===========================================================
+  const items = document.querySelectorAll<HTMLDivElement>('.faq__item');
+
+  items.forEach((item) => {
+    const question = item.querySelector('.faq__question');
+    const answer = item.querySelector<HTMLDivElement>('.faq__answer');
+
+    question?.addEventListener('click', () => {
+      const isOpen = item.classList.contains('is-open');
+
+      // Tutup semua item lain
+      items.forEach((other) => {
+        other.classList.remove('is-open');
+        other.querySelector('.faq__question')?.setAttribute('aria-expanded', 'false');
+        const otherAnswer = other.querySelector<HTMLDivElement>('.faq__answer');
+        if (otherAnswer) otherAnswer.style.maxHeight = '0px';
+      });
+
+      if (!isOpen && answer) {
+        item.classList.add('is-open');
+        question.setAttribute('aria-expanded', 'true');
+        answer.style.maxHeight = `${answer.scrollHeight}px`;
+      }
+    });
+  });
+</script>

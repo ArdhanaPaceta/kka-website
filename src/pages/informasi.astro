@@ -1,0 +1,24 @@
+---
+// =============================================================
+// pages/informasi.astro — Halaman Informasi
+// =============================================================
+import MainLayout from '../layouts/MainLayout.astro';
+import Information from '../components/Information.astro';
+import Schedule from '../components/Schedule.astro';
+import FAQ from '../components/FAQ.astro';
+---
+
+<MainLayout
+  title="Informasi"
+  description="Informasi lengkap seputar jenjang, jadwal, lokasi, dan persyaratan Kompetisi Kompetensi Akademik."
+>
+  <section class="page-hero">
+    <div class="container">
+      <h1 class="page-hero__title">Informasi Kompetisi</h1>
+    </div>
+  </section>
+
+  <Information />
+  <Schedule />
+  <FAQ />
+</MainLayout>

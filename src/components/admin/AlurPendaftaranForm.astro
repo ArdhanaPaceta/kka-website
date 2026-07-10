@@ -1,0 +1,401 @@
+---
+import { supabase } from '../../lib/supabase';
+
+const { data: langkahList } = await supabase
+  .from('alur_pendaftaran')
+  .select('*')
+  .order('urutan', { ascending: true });
+---
+
+<div class="form-card">
+  <div class="card-header">
+    <div>
+      <h2>Kelola Alur Pendaftaran</h2>
+      <p class="form-hint">Atur langkah-langkah alur pendaftaran yang tampil di halaman publik.</p>
+    </div>
+    <span class="badge-count">{langkahList?.length ?? 0} Langkah</span>
+  </div>
+
+  <!-- FORM TAMBAH -->
+  <form id="alurForm" class="alur-form">
+    <div class="form-grid">
+      <div class="field">
+        <label for="aUrutan">Urutan</label>
+        <input type="number" id="aUrutan" placeholder="1" value="1" required />
+      </div>
+      <div class="field">
+        <label for="aJudul">Judul Langkah</label>
+        <input type="text" id="aJudul" placeholder="Contoh: Pilih Kabupaten" required />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="aDeskripsi">Deskripsi</label>
+      <textarea
+        id="aDeskripsi"
+        rows="3"
+        placeholder="Contoh: Tentukan wilayah kabupaten tempat Anda akan mengikuti kompetisi."
+        required
+      ></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" id="aSubmitBtn">
+        Tambah Langkah
+      </button>
+      <span id="aStatus" class="status-text"></span>
+    </div>
+  </form>
+
+  <hr class="form-divider" />
+
+  <!-- LIST LANGKAH -->
+  <div class="list-header">
+    <h3>Daftar Langkah</h3>
+  </div>
+
+  <div id="alurList" class="alur-list">
+    {(langkahList ?? []).length === 0 ? (
+      <div class="empty-state">
+        <p>Belum ada langkah alur pendaftaran.</p>
+        <span class="empty-sub">Tambahkan langkah pertama menggunakan form di atas.</span>
+      </div>
+    ) : (
+      langkahList.map((step) => (
+        <div class="alur-item" data-id={step.id}>
+          <div class="alur-item__number">
+            {String(step.urutan).padStart(2, '0')}
+          </div>
+          <div class="alur-item__body">
+            <strong>{step.judul}</strong>
+            <p>{step.deskripsi}</p>
+          </div>
+          <button type="button" class="btn-delete" data-id={step.id}>Hapus</button>
+        </div>
+      ))
+    )}
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '../../lib/supabase';
+
+  const alurForm = document.getElementById('alurForm');
+  const aStatus = document.getElementById('aStatus');
+  const aSubmitBtn = document.getElementById('aSubmitBtn');
+
+  alurForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const urutan = parseInt(document.getElementById('aUrutan').value || '0', 10);
+    const judul = document.getElementById('aJudul').value.trim();
+    const deskripsi = document.getElementById('aDeskripsi').value.trim();
+
+    if (!judul || !deskripsi) {
+      aStatus.textContent = 'Judul dan deskripsi wajib diisi.';
+      aStatus.style.color = '#f59e0b';
+      return;
+    }
+
+    aSubmitBtn.disabled = true;
+    aStatus.textContent = 'Menyimpan...';
+    aStatus.style.color = '#2563eb';
+
+    const payload = { urutan, judul, deskripsi };
+
+    const { error } = await supabase.from('alur_pendaftaran').insert(payload);
+
+    if (error) {
+      aStatus.textContent = 'Gagal: ' + error.message;
+      aStatus.style.color = '#dc2626';
+    } else {
+      aStatus.textContent = 'Langkah berhasil ditambahkan!';
+      aStatus.style.color = '#16a34a';
+      alurForm.reset();
+      document.getElementById('aUrutan').value = 1;
+      setTimeout(() => window.location.reload(), 800);
+    }
+
+    aSubmitBtn.disabled = false;
+  });
+
+  document.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Hapus langkah alur pendaftaran ini?')) return;
+
+      const { error } = await supabase
+        .from('alur_pendaftaran')
+        .delete()
+        .eq('id', btn.dataset.id);
+
+      if (error) {
+        alert('Gagal menghapus: ' + error.message);
+      } else {
+        window.location.reload();
+      }
+    });
+  });
+</script>
+
+<style>
+  /* ----- CARD UTAMA ----- */
+  .form-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.75rem;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .form-hint {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .badge-count {
+    background: #eef2ff;
+    color: #2563eb;
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ----- FORM ----- */
+  .alur-form {
+    margin-bottom: 0.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .field input,
+  .field textarea {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+    background: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: #2563eb;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .status-text {
+    font-weight: 500;
+    font-size: 0.95rem;
+    min-height: 1.8rem;
+  }
+
+  .form-divider {
+    border: 0;
+    border-top: 2px solid #e9edf4;
+    margin: 1.5rem 0 1.25rem 0;
+  }
+
+  /* ----- LIST HEADER ----- */
+  .list-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 1rem 0;
+  }
+
+  /* ----- LIST ITEMS ----- */
+  .alur-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .alur-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    background: #fafcff;
+    border-radius: 10px;
+    border: 1px solid #eef2f6;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .alur-item:hover {
+    background: #f8fafc;
+    border-color: #d9e2ef;
+    transform: translateX(4px);
+  }
+
+  .alur-item__number {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #2563eb;
+    background: #eff6ff;
+    padding: 0.2rem 0.7rem;
+    border-radius: 8px;
+    flex-shrink: 0;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .alur-item__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .alur-item__body strong {
+    font-size: 1rem;
+    color: #0f172a;
+  }
+  .alur-item__body p {
+    font-size: 0.9rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .btn-delete {
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    background: #fef2f2;
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  /* ----- EMPTY STATE ----- */
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafcff;
+    border-radius: 12px;
+    border: 1px dashed #d9e2ef;
+  }
+  .empty-state p {
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 0.25rem 0;
+  }
+  .empty-sub {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* ----- RESPONSIF ----- */
+  @media (max-width: 640px) {
+    .form-card {
+      padding: 1rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .alur-item {
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .alur-item__number {
+      font-size: 1.1rem;
+      min-width: 32px;
+      padding: 0.1rem 0.5rem;
+    }
+    .btn-delete {
+      width: 100%;
+      text-align: center;
+    }
+    .form-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-primary {
+      justify-content: center;
+    }
+  }
+</style>
