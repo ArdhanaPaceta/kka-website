@@ -1,90 +1,91 @@
 ---
 // src/pages/admin/pendaftar.astro
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { supabase } from '../../lib/supabase';
-
-// Ambil data pendaftar
-const { data: pendaftar, error } = await supabase
-  .from('pendaftar')
-  .select('*')
-  .order('created_at', { ascending: false });
-
-if (error) {
-  console.error('Error fetch pendaftar:', error);
-}
-
-// Mapping relasi
-let kabupatenMap = {};
-let kecamatanMap = {};
-let sekolahMap = {};
-
-if (!error && pendaftar && pendaftar.length > 0) {
-  const kabIds = [...new Set(pendaftar.map(p => p.kabupaten_id).filter(Boolean))];
-  if (kabIds.length) {
-    const { data: kabList } = await supabase.from('kabupaten').select('id, nama').in('id', kabIds);
-    kabList?.forEach(k => kabupatenMap[k.id] = k.nama);
-  }
-
-  const kecIds = [...new Set(pendaftar.map(p => p.kecamatan_id).filter(Boolean))];
-  if (kecIds.length) {
-    const { data: kecList } = await supabase.from('kecamatan').select('id, nama').in('id', kecIds);
-    kecList?.forEach(k => kecamatanMap[k.id] = k.nama);
-  }
-
-  const sekIds = [...new Set(pendaftar.map(p => p.sekolah_id).filter(Boolean))];
-  if (sekIds.length) {
-    const { data: sekList } = await supabase.from('sekolah').select('id, nama, biaya_jenjang_id').in('id', sekIds);
-    const bjIds = [...new Set(sekList?.map(s => s.biaya_jenjang_id).filter(Boolean) || [])];
-    let bjMap = {};
-    if (bjIds.length) {
-      const { data: bjList } = await supabase.from('biaya_jenjang').select('id, jenjang').in('id', bjIds);
-      bjList?.forEach(b => bjMap[b.id] = b.jenjang);
-    }
-    sekList?.forEach(s => {
-      sekolahMap[s.id] = {
-        nama: s.nama,
-        jenjang: bjMap[s.biaya_jenjang_id] || '-'
-      };
-    });
-  }
-}
-
-const displayData = pendaftar?.map(p => ({
-  ...p,
-  kabupaten: kabupatenMap[p.kabupaten_id] || '-',
-  kecamatan: kecamatanMap[p.kecamatan_id] || '-',
-  sekolah: sekolahMap[p.sekolah_id]?.nama || '-',
-  jenjang: sekolahMap[p.sekolah_id]?.jenjang || '-',
-})) || [];
-
-const total = displayData.length;
-const errorMessage = error?.message || null;
+import '../../styles/pendaftar.css';
 ---
 
 <AdminLayout title="Data Pendaftar">
-  <div class="page-header">
-    <div>
-      <h1>Data Pendaftar</h1>
-      <p class="subtitle">Total: {total} peserta</p>
+  <div class="padm-page">
+    <!-- Header -->
+    <div class="padm-header">
+      <div>
+        <h1 class="padm-title">Data Pendaftar</h1>
+        <p class="padm-subtitle">Total: <strong id="totalPendaftar">0</strong> peserta</p>
+      </div>
+      <div class="padm-actions">
+        <button id="exportBtn" class="padm-btn">📥 Export CSV</button>
+        <button id="refreshBtn" class="padm-btn">🔄 Refresh</button>
+      </div>
     </div>
-    <div class="header-actions">
-      <button id="exportBtn" class="btn-export">Export CSV</button>
-      <button id="refreshBtn" class="btn-refresh">Refresh</button>
-    </div>
-  </div>
 
-  {errorMessage ? (
-    <div class="error-box">
-      <p>Gagal memuat data: {errorMessage}</p>
+    <!-- Kartu Ringkasan Statistik -->
+    <div class="padm-stats">
+      <div class="padm-stat-card">
+        <div class="padm-stat-icon padm-stat-icon--blue">👥</div>
+        <div>
+          <p class="padm-stat-label">Total Pendaftar</p>
+          <p id="statTotal" class="padm-stat-value">0</p>
+        </div>
+      </div>
+      <div class="padm-stat-card">
+        <div class="padm-stat-icon padm-stat-icon--emerald">✅</div>
+        <div>
+          <p class="padm-stat-label">Lunas</p>
+          <p id="statLunas" class="padm-stat-value padm-stat-value--emerald">0</p>
+        </div>
+      </div>
+      <div class="padm-stat-card">
+        <div class="padm-stat-icon padm-stat-icon--amber">⏳</div>
+        <div>
+          <p class="padm-stat-label">Menunggu Pembayaran</p>
+          <p id="statMenunggu" class="padm-stat-value padm-stat-value--amber">0</p>
+        </div>
+      </div>
+      <div class="padm-stat-card">
+        <div class="padm-stat-icon padm-stat-icon--red">✕</div>
+        <div>
+          <p class="padm-stat-label">Batal</p>
+          <p id="statBatal" class="padm-stat-value padm-stat-value--red">0</p>
+        </div>
+      </div>
     </div>
-  ) : total === 0 ? (
-    <div class="empty-state">
-      <p>Belum ada data pendaftar.</p>
+
+    <!-- Filter & Search -->
+    <div class="padm-filters">
+      <div class="padm-search-wrap">
+        <span class="padm-search-icon">🔍</span>
+        <input type="text" id="searchInput" class="padm-input" placeholder="Cari nama, NISN, kode, atau status pembayaran..." />
+      </div>
+      <select id="statusFilter" class="padm-select">
+        <option value="">Semua Status</option>
+        <option value="Menunggu Pembayaran">Menunggu Pembayaran</option>
+        <option value="Lunas">Lunas</option>
+        <option value="Batal">Batal</option>
+      </select>
+      <select id="jenjangFilter" class="padm-select">
+        <option value="">Semua Jenjang</option>
+      </select>
     </div>
-  ) : (
-    <div class="table-wrapper">
-      <div class="table-scroll">
-        <table>
+
+    <!-- Error Banner -->
+    <div id="errorBanner" class="padm-error-banner padm-is-hidden"></div>
+
+    <!-- Loading -->
+    <div id="loadingState" class="padm-state">
+      <div class="padm-state-icon">⏳</div>
+      <p class="padm-state-text">Memuat data pendaftar...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="padm-state padm-is-hidden">
+      <div class="padm-state-icon">📋</div>
+      <p class="padm-state-text">Belum ada data pendaftar.</p>
+    </div>
+
+    <!-- Table Wrapper -->
+    <div id="tableWrapper" class="padm-table-wrapper padm-is-hidden">
+      <div class="padm-table-scroll">
+        <table class="padm-table">
           <thead>
             <tr>
               <th>No</th>
@@ -99,300 +100,299 @@ const errorMessage = error?.message || null;
               <th>Jenjang</th>
               <th>Kelas</th>
               <th>Status</th>
-              <th>Daftar</th>
+              <th>Tanggal</th>
               <th>Aksi</th>
             </tr>
           </thead>
-          <tbody>
-            {displayData.map((p, i) => (
-              <tr key={p.id} data-id={p.id}>
-                <td>{i + 1}</td>
-                <td><code class="kode">{p.kode_pendaftaran}</code></td>
-                <td><strong>{p.nama_siswa}</strong></td>
-                <td>{p.nisn}</td>
-                <td>{p.no_wa}</td>
-                <td>{p.gender}</td>
-                <td>{p.kabupaten}</td>
-                <td>{p.kecamatan}</td>
-                <td>{p.sekolah}</td>
-                <td>{p.jenjang}</td>
-                <td>{p.kelas}</td>
-                <td>
-                  <span class={`status status-${p.status?.toLowerCase().replace(/ /g, '-') || 'menunggu-pembayaran'}`}>
-                    {p.status || 'Menunggu Pembayaran'}
-                  </span>
-                </td>
-                <td>{p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID') : '-'}</td>
-                <td>
-                  <div class="action-cell">
-                    <select class="status-select" data-id={p.id}>
-                      <option value="Menunggu Pembayaran" selected={p.status === 'Menunggu Pembayaran'}>Menunggu Pembayaran</option>
-                      <option value="Lunas" selected={p.status === 'Lunas'}>Lunas</option>
-                      <option value="Batal" selected={p.status === 'Batal'}>Batal</option>
-                    </select>
-                    <button class="btn-update-status" data-id={p.id}>Update</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+          <tbody id="tableBody"></tbody>
         </table>
       </div>
+      <div id="resultCount" class="padm-result-count"></div>
     </div>
-  )}
+  </div>
 </AdminLayout>
 
-<script>
+<script type="module">
   import { supabase } from '../../lib/supabase';
 
-  // --- Update Status (hanya 3 pilihan) ---
-  document.querySelectorAll('.btn-update-status').forEach(btn => {
-    btn.addEventListener('click', async function() {
-      const id = this.dataset.id;
-      const select = document.querySelector(`.status-select[data-id="${id}"]`);
-      const newStatus = select.value;
-      const row = this.closest('tr');
-      const statusSpan = row.querySelector('.status');
-      
-      this.disabled = true;
-      this.textContent = 'Menyimpan...';
-      
-      try {
-        const { error } = await supabase
-          .from('pendaftar')
-          .update({ status: newStatus })
-          .eq('id', id);
-          
-        if (error) throw new Error(error.message);
-        
-        // Update tampilan
-        statusSpan.textContent = newStatus;
-        statusSpan.className = `status status-${newStatus.toLowerCase().replace(/ /g, '-')}`;
-        
-        this.textContent = 'Sukses';
-        this.style.background = '#d1fae5';
-        this.style.color = '#065f46';
-        
-        setTimeout(() => {
-          this.textContent = 'Update';
-          this.disabled = false;
-          this.style.background = '';
-          this.style.color = '';
-        }, 2000);
-        
-      } catch (err) {
-        alert('Gagal update status: ' + err.message);
-        this.textContent = 'Update';
-        this.disabled = false;
+  // --- State ---
+  let allData = [];
+  let filteredData = [];
+
+  // --- DOM Elements ---
+  const totalPendaftar = document.getElementById('totalPendaftar');
+  const searchInput = document.getElementById('searchInput');
+  const statusFilter = document.getElementById('statusFilter');
+  const jenjangFilter = document.getElementById('jenjangFilter');
+  const tableBody = document.getElementById('tableBody');
+  const loadingState = document.getElementById('loadingState');
+  const emptyState = document.getElementById('emptyState');
+  const tableWrapper = document.getElementById('tableWrapper');
+  const errorBanner = document.getElementById('errorBanner');
+  const resultCount = document.getElementById('resultCount');
+
+  const statTotal = document.getElementById('statTotal');
+  const statLunas = document.getElementById('statLunas');
+  const statMenunggu = document.getElementById('statMenunggu');
+  const statBatal = document.getElementById('statBatal');
+
+  // Helper: konversi apa pun (angka, null, undefined) jadi string lowercase
+  // yang aman untuk dicocokkan, supaya pencarian tidak error/gagal diam-diam
+  // kalau kolom seperti NISN atau No. WA disimpan sebagai angka di database.
+  function toSearchable(value) {
+    return String(value ?? '').toLowerCase();
+  }
+
+  // --- Show/Hide States (pakai class .padm-is-hidden, BUKAN Tailwind 'hidden') ---
+  function showLoading() {
+    loadingState.classList.remove('padm-is-hidden');
+    emptyState.classList.add('padm-is-hidden');
+    tableWrapper.classList.add('padm-is-hidden');
+    errorBanner.classList.add('padm-is-hidden');
+  }
+
+  function showTable() {
+    loadingState.classList.add('padm-is-hidden');
+    emptyState.classList.add('padm-is-hidden');
+    tableWrapper.classList.remove('padm-is-hidden');
+    errorBanner.classList.add('padm-is-hidden');
+  }
+
+  function showEmpty() {
+    loadingState.classList.add('padm-is-hidden');
+    emptyState.classList.remove('padm-is-hidden');
+    tableWrapper.classList.add('padm-is-hidden');
+    errorBanner.classList.add('padm-is-hidden');
+  }
+
+  function showError(msg) {
+    loadingState.classList.add('padm-is-hidden');
+    emptyState.classList.add('padm-is-hidden');
+    tableWrapper.classList.add('padm-is-hidden');
+    errorBanner.classList.remove('padm-is-hidden');
+    errorBanner.textContent = '❌ ' + msg;
+  }
+
+  // --- Update Kartu Statistik ---
+  function updateStats() {
+    statTotal.textContent = allData.length;
+    statLunas.textContent = allData.filter(d => d.status === 'Lunas').length;
+    statMenunggu.textContent = allData.filter(d => d.status === 'Menunggu Pembayaran' || !d.status).length;
+    statBatal.textContent = allData.filter(d => d.status === 'Batal').length;
+  }
+
+  // --- Fetch Data ---
+  async function loadData() {
+    showLoading();
+
+    try {
+      const { data: pendaftar, error } = await supabase
+        .from('pendaftar')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!pendaftar || pendaftar.length === 0) {
+        allData = [];
+        updateStats();
+        showEmpty();
+        return;
       }
+
+      const kabIds = [...new Set(pendaftar.map(p => p.kabupaten_id).filter(Boolean))];
+      const kecIds = [...new Set(pendaftar.map(p => p.kecamatan_id).filter(Boolean))];
+      const sekIds = [...new Set(pendaftar.map(p => p.sekolah_id).filter(Boolean))];
+
+      const [kabRes, kecRes, sekRes] = await Promise.all([
+        kabIds.length ? supabase.from('kabupaten').select('id, nama').in('id', kabIds) : { data: [] },
+        kecIds.length ? supabase.from('kecamatan').select('id, nama').in('id', kecIds) : { data: [] },
+        sekIds.length ? supabase.from('sekolah').select('id, nama, biaya_jenjang_id').in('id', sekIds) : { data: [] },
+      ]);
+
+      const kabupatenMap = {};
+      kabRes.data?.forEach(k => kabupatenMap[k.id] = k.nama);
+
+      const kecamatanMap = {};
+      kecRes.data?.forEach(k => kecamatanMap[k.id] = k.nama);
+
+      const sekolahMap = {};
+      const bjIds = [...new Set(sekRes.data?.map(s => s.biaya_jenjang_id).filter(Boolean) || [])];
+      let bjMap = {};
+      if (bjIds.length) {
+        const { data: bjList } = await supabase.from('biaya_jenjang').select('id, jenjang').in('id', bjIds);
+        bjList?.forEach(b => bjMap[b.id] = b.jenjang);
+      }
+      sekRes.data?.forEach(s => {
+        sekolahMap[s.id] = { nama: s.nama, jenjang: bjMap[s.biaya_jenjang_id] || '-' };
+      });
+
+      allData = pendaftar.map(p => ({
+        ...p,
+        kabupaten: kabupatenMap[p.kabupaten_id] || '-',
+        kecamatan: kecamatanMap[p.kecamatan_id] || '-',
+        sekolah: sekolahMap[p.sekolah_id]?.nama || '-',
+        jenjang: sekolahMap[p.sekolah_id]?.jenjang || '-',
+      }));
+
+      const jenjangSet = [...new Set(allData.map(d => d.jenjang).filter(Boolean))];
+      jenjangFilter.innerHTML = '<option value="">Semua Jenjang</option>' +
+        jenjangSet.map(j => `<option value="${j}">${j}</option>`).join('');
+
+      updateStats();
+      applyFilters();
+      showTable();
+    } catch (err) {
+      console.error('Error:', err);
+      showError(err.message || 'Gagal memuat data');
+    }
+  }
+
+  // --- Filter & Search (mencakup nama, NISN, kode, WA, DAN status pembayaran) ---
+  function applyFilters() {
+    const search = toSearchable(searchInput.value).trim();
+    const status = statusFilter.value;
+    const jenjang = jenjangFilter.value;
+
+    filteredData = allData.filter(d => {
+      const matchSearch = !search ||
+        toSearchable(d.nama_siswa).includes(search) ||
+        toSearchable(d.nisn).includes(search) ||
+        toSearchable(d.kode_pendaftaran).includes(search) ||
+        toSearchable(d.no_wa).includes(search) ||
+        toSearchable(d.status || 'Menunggu Pembayaran').includes(search);
+
+      const matchStatus = !status || d.status === status || (status === 'Menunggu Pembayaran' && !d.status);
+      const matchJenjang = !jenjang || d.jenjang === jenjang;
+
+      return matchSearch && matchStatus && matchJenjang;
     });
-  });
+
+    renderTable(filteredData);
+    totalPendaftar.textContent = filteredData.length;
+    resultCount.textContent = `Menampilkan ${filteredData.length} dari ${allData.length} pendaftar`;
+
+    if (filteredData.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="14" class="padm-empty-row">Tidak ada data yang sesuai dengan pencarian/filter</td></tr>`;
+    }
+  }
+
+  searchInput.addEventListener('input', applyFilters);
+  statusFilter.addEventListener('change', applyFilters);
+  jenjangFilter.addEventListener('change', applyFilters);
+
+  // --- Avatar inisial dari nama ---
+  function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
+  }
+
+  function getAvatarClass(name) {
+    if (!name) return 'padm-avatar--0';
+    return `padm-avatar--${name.charCodeAt(0) % 6}`;
+  }
+
+  // --- Render Table ---
+  function renderTable(data) {
+    tableBody.innerHTML = data.map((p, i) => {
+      const badgeClass = {
+        'Menunggu Pembayaran': 'padm-badge--amber',
+        'Lunas': 'padm-badge--emerald',
+        'Batal': 'padm-badge--red',
+      }[p.status] || 'padm-badge--amber';
+
+      return `
+        <tr data-id="${p.id}">
+          <td>${i + 1}</td>
+          <td><code class="padm-code">${p.kode_pendaftaran || '-'}</code></td>
+          <td>
+            <div class="padm-name-cell">
+              <span class="padm-avatar ${getAvatarClass(p.nama_siswa)}">${getInitials(p.nama_siswa)}</span>
+              <span class="padm-name-text">${p.nama_siswa || '-'}</span>
+            </div>
+          </td>
+          <td>${p.nisn || '-'}</td>
+          <td>${p.no_wa || '-'}</td>
+          <td>${p.gender || '-'}</td>
+          <td>${p.kabupaten}</td>
+          <td>${p.kecamatan}</td>
+          <td>${p.sekolah}</td>
+          <td>${p.jenjang}</td>
+          <td>${p.kelas || '-'}</td>
+          <td><span class="padm-badge ${badgeClass}">${p.status || 'Menunggu Pembayaran'}</span></td>
+          <td class="padm-date">${p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID') : '-'}</td>
+          <td>
+            <div class="padm-actions-cell">
+              <select class="status-select padm-status-select" data-id="${p.id}">
+                <option value="Menunggu Pembayaran" ${p.status === 'Menunggu Pembayaran' ? 'selected' : ''}>Menunggu Pembayaran</option>
+                <option value="Lunas" ${p.status === 'Lunas' ? 'selected' : ''}>Lunas</option>
+                <option value="Batal" ${p.status === 'Batal' ? 'selected' : ''}>Batal</option>
+              </select>
+              <button class="btn-update-status padm-btn-update" data-id="${p.id}">Update</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    attachUpdateEvents();
+  }
+
+  // --- Update Status ---
+  function attachUpdateEvents() {
+    tableBody.querySelectorAll('.btn-update-status').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const id = this.dataset.id;
+        const select = tableBody.querySelector(`.status-select[data-id="${id}"]`);
+        const newStatus = select.value;
+
+        this.disabled = true;
+        this.textContent = '...';
+
+        try {
+          const { error } = await supabase.from('pendaftar').update({ status: newStatus }).eq('id', id);
+          if (error) throw error;
+
+          const idx = allData.findIndex(d => d.id === id);
+          if (idx !== -1) allData[idx].status = newStatus;
+
+          updateStats();
+          applyFilters();
+        } catch (err) {
+          alert('Gagal update: ' + err.message);
+          this.disabled = false;
+          this.textContent = 'Update';
+        }
+      });
+    });
+  }
 
   // --- Export CSV ---
-  document.getElementById('exportBtn')?.addEventListener('click', () => {
-    const table = document.querySelector('table');
-    if (!table) return;
-    
-    const rows = table.querySelectorAll('tr');
-    let csv = [];
-    rows.forEach(row => {
-      const cols = row.querySelectorAll('td, th');
-      const rowData = [];
-      cols.forEach((col, index) => {
-        if (index === cols.length - 1) return; // skip kolom aksi
-        let text = col.innerText.trim();
-        const statusSpan = col.querySelector('.status');
-        if (statusSpan) text = statusSpan.innerText.trim();
-        if (text.includes(',') || text.includes('"')) {
-          text = `"${text.replace(/"/g, '""')}"`;
-        }
-        rowData.push(text);
-      });
-      csv.push(rowData.join(','));
-    });
-    
-    const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const data = filteredData.length ? filteredData : allData;
+    if (!data.length) return alert('Tidak ada data untuk diexport');
+
+    const headers = ['No', 'Kode', 'Nama', 'NISN', 'WA', 'Gender', 'Kabupaten', 'Kecamatan', 'Sekolah', 'Jenjang', 'Kelas', 'Status', 'Tanggal'];
+    const rows = data.map((p, i) => [
+      i + 1, p.kode_pendaftaran, p.nama_siswa, p.nisn, p.no_wa, p.gender,
+      p.kabupaten, p.kecamatan, p.sekolah, p.jenjang, p.kelas, p.status,
+      p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID') : '-'
+    ].map(v => `"${String(v ?? '-').replace(/"/g, '""')}"`).join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pendaftar_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
+    a.download = `pendaftar_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
 
   // --- Refresh ---
-  document.getElementById('refreshBtn')?.addEventListener('click', () => {
-    window.location.reload();
-  });
+  document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+  // --- Init ---
+  loadData();
 </script>
-
-<style>
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  .page-header h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0;
-    color: #0f172a;
-  }
-  .subtitle {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-  .header-actions {
-    display: flex;
-    gap: 0.75rem;
-  }
-  .btn-export,
-  .btn-refresh {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    color: #1e293b;
-  }
-  .btn-export:hover,
-  .btn-refresh:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-  }
-  .error-box {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #b91c1c;
-    padding: 1rem;
-    border-radius: 8px;
-  }
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px dashed #e2e8f0;
-    color: #64748b;
-  }
-  .table-wrapper {
-    background: #ffffff;
-    border-radius: 12px;
-    border: 1px solid #edf2f7;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  .table-scroll {
-    overflow-x: auto;
-    padding: 0.5rem;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    min-width: 1000px;
-  }
-  th, td {
-    padding: 0.6rem 0.8rem;
-    text-align: left;
-    border-bottom: 1px solid #eef2f6;
-    white-space: nowrap;
-  }
-  th {
-    background: #f8fafc;
-    font-weight: 600;
-    color: #1e293b;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-  tr:hover td {
-    background: #fafcff;
-  }
-  .kode {
-    font-size: 0.75rem;
-    background: #f1f5f9;
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
-    font-family: monospace;
-  }
-  .status {
-    display: inline-block;
-    padding: 0.15rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: capitalize;
-  }
-  .status-menunggu-pembayaran { background: #fef3c7; color: #92400e; }
-  .status-lunas { background: #d1fae5; color: #065f46; }
-  .status-batal { background: #fecaca; color: #991b1b; }
-
-  .action-cell {
-    display: flex;
-    gap: 0.4rem;
-    align-items: center;
-    flex-wrap: nowrap;
-  }
-  .status-select {
-    padding: 0.25rem 0.4rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    background: white;
-    cursor: pointer;
-  }
-  .btn-update-status {
-    padding: 0.25rem 0.6rem;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    background: #2563eb;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .btn-update-status:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-  .btn-update-status:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 768px) {
-    .page-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .header-actions {
-      justify-content: stretch;
-    }
-    .btn-export, .btn-refresh {
-      flex: 1;
-      text-align: center;
-    }
-    .action-cell {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .status-select {
-      width: 100%;
-    }
-    .btn-update-status {
-      width: 100%;
-    }
-  }
-</style>

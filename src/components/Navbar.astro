@@ -1,16 +1,13 @@
 ---
 // =============================================================
 // components/Navbar.astro
-// Sticky navbar: transparan di atas Hero, putih + shadow saat scroll
-// Menu "Informasi" punya dropdown: Pendaftaran Mandiri / Kolektif
+// Sticky navbar + dropdown "Informasi" (tanpa Cek Pendaftaran)
 // =============================================================
-
 import { supabase } from "../lib/supabase";
 
 const currentPath = Astro.url.pathname;
 let menuItems = [];
 
-// Mengambil data label, href, dan urutan dari database
 const { data, error } = await supabase
   .from('navbar_menus')
   .select('label, href, urutan')
@@ -19,22 +16,18 @@ const { data, error } = await supabase
 if (data && !error && data.length > 0) {
   menuItems = data;
 } else {
-  // Fallback jika database kosong/error
   menuItems = [
     { label: 'Beranda', href: '/' },
-    { label: 'Informasi', href: '/regulasi' },
+    { label: 'Informasi', href: '/informasi' },
     { label: 'Tentang', href: '/tentang' },
-    
   ];
 }
 
-// Submenu untuk item "Informasi" (statis, bukan dari database)
 const informasiSubmenu = [
   { label: 'Pendaftaran Mandiri', href: '/pendaftaran-mandiri' },
   { label: 'Pendaftaran Kolektif', href: '/pendaftaran-kolektif' },
 ];
 
-// Fungsi untuk mengecek menu mana yang sedang aktif
 function isActive(href: string) {
   if (href === '/') return currentPath === '/';
   return currentPath.startsWith(href);
@@ -43,29 +36,31 @@ function isActive(href: string) {
 
 <header class="navbar" id="navbar">
   <div class="container navbar__inner">
-
-    <!-- Bagian Brand (Hanya Teks, Bisa diklik ke Beranda) -->
     <a href="/" class="navbar__brand" style="text-decoration: none;">
       <span class="navbar__brand-text">KKA</span>
     </a>
 
-    <!-- Bagian Menu (Dengan tautan Href) -->
     <nav class="navbar__menu" id="navbarMenu">
       <ul>
         {menuItems.map((item) => (
           item.label === 'Informasi' ? (
             <li class="navbar__item navbar__item--dropdown">
-              <button
-                type="button"
-                class:list={['navbar__link', 'navbar__link--trigger', { 'is-active': isActive(item.href) }]}
-                aria-expanded="false"
-                aria-haspopup="true"
-              >
-                {item.label}
-                <svg class="navbar__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+              <div class="navbar__dropdown-wrapper">
+                <a href={item.href} class:list={['navbar__link', { 'is-active': isActive(item.href) }]}>
+                  {item.label}
+                </a>
+                <button
+                  type="button"
+                  class="navbar__dropdown-toggle"
+                  aria-expanded="false"
+                  aria-haspopup="true"
+                  aria-label="Buka submenu Informasi"
+                >
+                  <svg class="navbar__chevron" width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
 
               <div class="navbar__dropdown">
                 {informasiSubmenu.map((sub) => (
@@ -86,589 +81,153 @@ function isActive(href: string) {
       </ul>
     </nav>
 
-    <!-- Bagian Actions (Cek Pendaftaran + Mobile Toggle) -->
     <div class="navbar__actions">
-      <button type="button" class="navbar__cek-btn" id="cekPendaftaranBtn">
-        🔍 Cek Pendaftaran
-      </button>
-
       <button class="navbar__toggle" id="navbarToggle" aria-label="Buka menu" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
+        <span></span><span></span><span></span>
       </button>
     </div>
   </div>
 </header>
 
-<!-- ===================== MODAL CEK PENDAFTARAN ===================== -->
-<div class="cek-modal" id="cekModal">
-  <div class="cek-modal__backdrop" id="cekModalBackdrop"></div>
+<script>
+  const navbar = document.getElementById('navbar');
+  const toggle = document.getElementById('navbarToggle');
+  const menu = document.getElementById('navbarMenu');
 
-  <div class="cek-modal__card">
-    <button type="button" class="cek-modal__close" id="cekModalClose" aria-label="Tutup">✕</button>
-
-    <h2 class="cek-modal__title">Cek Status Pendaftaran</h2>
-    <p class="cek-modal__subtitle">Masukkan kode pendaftaran Anda (contoh: KKA-2026-0021)</p>
-
-    <div class="cek-search">
-      <input
-        type="text"
-        id="cekKodeInput"
-        class="cek-search__input"
-        placeholder="KKA-2026-0021"
-        autocomplete="off"
-      />
-      <button type="button" id="cekSearchBtn" class="cek-search__btn">
-        <span class="cek-search__btn-text">Cari</span>
-        <span class="cek-search__btn-loading" style="display:none;">Mencari...</span>
-      </button>
-    </div>
-
-    <p id="cekError" class="cek-error" style="display:none;"></p>
-
-    <!-- Hasil pencarian -->
-    <div id="cekResult" class="cek-result" style="display:none;">
-      <div class="cek-result__row">
-        <span class="cek-result__label">Nama Siswa</span>
-        <span class="cek-result__value" id="cekResultNama">-</span>
-      </div>
-      <div class="cek-result__row">
-        <span class="cek-result__label">Kode Pendaftaran</span>
-        <span class="cek-result__value" id="cekResultKode">-</span>
-      </div>
-      <div class="cek-result__row">
-        <span class="cek-result__label">Status</span>
-        <span class="cek-result__value">
-          <span id="cekResultStatus" class="cek-status-badge">-</span>
-        </span>
-      </div>
-
-      <!-- Upload bukti transfer, muncul kalau status Menunggu Pembayaran -->
-      <div id="cekUploadSection" class="cek-upload" style="display:none;">
-        <div class="cek-upload__divider"></div>
-        <label class="cek-upload__label" for="cekBuktiFile">Upload Bukti Transfer</label>
-        <input type="file" id="cekBuktiFile" accept="image/*,application/pdf" class="cek-upload__input" />
-        <img id="cekBuktiPreview" class="cek-upload__preview" style="display:none;" alt="Preview bukti transfer" />
-        <button type="button" id="cekUploadBtn" class="cek-upload__btn">
-          <span class="cek-upload__btn-text">Kirim Bukti Transfer</span>
-          <span class="cek-upload__btn-loading" style="display:none;">Mengunggah...</span>
-        </button>
-        <p id="cekUploadMsg" class="cek-upload__msg" style="display:none;"></p>
-      </div>
-
-      <!-- Sudah ada bukti transfer -->
-      <div id="cekBuktiAda" class="cek-bukti-ada" style="display:none;">
-        <div class="cek-upload__divider"></div>
-        <p>✅ Bukti transfer sudah Anda kirim. Menunggu verifikasi admin.</p>
-        <a id="cekBuktiLink" href="#" target="_blank" rel="noopener" class="cek-bukti-ada__link">Lihat bukti yang dikirim</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script type="module">
-  import { createClient } from '@supabase/supabase-js';
-
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-  const cekBtn = document.getElementById('cekPendaftaranBtn');
-  const modal = document.getElementById('cekModal');
-  const backdrop = document.getElementById('cekModalBackdrop');
-  const closeBtn = document.getElementById('cekModalClose');
-
-  const kodeInput = document.getElementById('cekKodeInput');
-  const searchBtn = document.getElementById('cekSearchBtn');
-  const searchBtnText = searchBtn.querySelector('.cek-search__btn-text');
-  const searchBtnLoading = searchBtn.querySelector('.cek-search__btn-loading');
-
-  const cekError = document.getElementById('cekError');
-  const cekResult = document.getElementById('cekResult');
-  const resultNama = document.getElementById('cekResultNama');
-  const resultKode = document.getElementById('cekResultKode');
-  const resultStatus = document.getElementById('cekResultStatus');
-
-  const uploadSection = document.getElementById('cekUploadSection');
-  const buktiFileInput = document.getElementById('cekBuktiFile');
-  const buktiPreview = document.getElementById('cekBuktiPreview');
-  const uploadBtn = document.getElementById('cekUploadBtn');
-  const uploadBtnText = uploadBtn.querySelector('.cek-upload__btn-text');
-  const uploadBtnLoading = uploadBtn.querySelector('.cek-upload__btn-loading');
-  const uploadMsg = document.getElementById('cekUploadMsg');
-
-  const buktiAdaSection = document.getElementById('cekBuktiAda');
-  const buktiLink = document.getElementById('cekBuktiLink');
-
-  let currentPendaftarId = null;
-  let selectedFile = null;
-
-  // --- Buka / Tutup Modal ---
-  function openModal() {
-    modal.classList.add('is-open');
-    document.body.style.overflow = 'hidden';
-    kodeInput.focus();
-  }
-  function closeModal() {
-    modal.classList.remove('is-open');
-    document.body.style.overflow = '';
-    resetModal();
-  }
-  function resetModal() {
-    kodeInput.value = '';
-    cekError.style.display = 'none';
-    cekResult.style.display = 'none';
-    uploadSection.style.display = 'none';
-    buktiAdaSection.style.display = 'none';
-    buktiPreview.style.display = 'none';
-    uploadMsg.style.display = 'none';
-    buktiFileInput.value = '';
-    selectedFile = null;
-    currentPendaftarId = null;
-  }
-
-  cekBtn.addEventListener('click', openModal);
-  backdrop.addEventListener('click', closeModal);
-  closeBtn.addEventListener('click', closeModal);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
-  });
-
-  // --- Cari Pendaftaran ---
-  async function cariPendaftaran() {
-    const kode = kodeInput.value.trim();
-    cekError.style.display = 'none';
-    cekResult.style.display = 'none';
-
-    if (!kode) {
-      cekError.textContent = 'Masukkan kode pendaftaran terlebih dahulu.';
-      cekError.style.display = 'block';
-      return;
-    }
-
-    searchBtnText.style.display = 'none';
-    searchBtnLoading.style.display = 'inline';
-    searchBtn.disabled = true;
-
-    try {
-      const { data, error } = await supabase
-        .from('pendaftar')
-        .select('id, nama_siswa, kode_pendaftaran, status, bukti_transfer_url')
-        .ilike('kode_pendaftaran', kode)
-        .maybeSingle();
-
-      if (error) throw new Error(error.message);
-      if (!data) {
-        cekError.textContent = 'Kode pendaftaran tidak ditemukan. Periksa kembali penulisannya.';
-        cekError.style.display = 'block';
-        return;
-      }
-
-      currentPendaftarId = data.id;
-      resultNama.textContent = data.nama_siswa;
-      resultKode.textContent = data.kode_pendaftaran;
-
-      const statusText = data.status || 'Menunggu Pembayaran';
-      resultStatus.textContent = statusText;
-      resultStatus.className = 'cek-status-badge ' + statusClass(statusText);
-
-      cekResult.style.display = 'block';
-
-      // Tampilkan bagian upload / bukti berdasarkan kondisi
-      if (data.bukti_transfer_url) {
-        uploadSection.style.display = 'none';
-        buktiAdaSection.style.display = 'block';
-        buktiLink.href = data.bukti_transfer_url;
-      } else if (statusText === 'Menunggu Pembayaran') {
-        uploadSection.style.display = 'block';
-        buktiAdaSection.style.display = 'none';
-      } else {
-        uploadSection.style.display = 'none';
-        buktiAdaSection.style.display = 'none';
-      }
-
-    } catch (err) {
-      cekError.textContent = 'Gagal mencari data: ' + err.message;
-      cekError.style.display = 'block';
-    } finally {
-      searchBtnText.style.display = 'inline';
-      searchBtnLoading.style.display = 'none';
-      searchBtn.disabled = false;
-    }
-  }
-
-  function statusClass(status) {
-    const map = {
-      'Menunggu Pembayaran': 'cek-status-badge--pending',
-      'Menunggu Verifikasi': 'cek-status-badge--review',
-      'Terverifikasi': 'cek-status-badge--success',
-      'Ditolak': 'cek-status-badge--danger',
-    };
-    return map[status] || 'cek-status-badge--pending';
-  }
-
-  searchBtn.addEventListener('click', cariPendaftaran);
-  kodeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      cariPendaftaran();
-    }
-  });
-
-  // --- Preview file sebelum upload ---
-  buktiFileInput.addEventListener('change', () => {
-    const file = buktiFileInput.files[0];
-    uploadMsg.style.display = 'none';
-    if (!file) {
-      selectedFile = null;
-      buktiPreview.style.display = 'none';
-      return;
-    }
-    selectedFile = file;
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        buktiPreview.src = e.target.result;
-        buktiPreview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
+  function handleScroll() {
+    if (!navbar) return;
+    if (window.scrollY > 40) {
+      navbar.classList.add('is-scrolled');
     } else {
-      buktiPreview.style.display = 'none';
+      navbar.classList.remove('is-scrolled');
+    }
+  }
+
+  handleScroll();
+  window.addEventListener('scroll', handleScroll, { passive: true });
+
+  // Mobile toggle
+  toggle?.addEventListener('click', () => {
+    const isOpen = menu?.classList.toggle('is-open');
+    toggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
+    navbar?.classList.toggle('is-scrolled', Boolean(isOpen) || window.scrollY > 40);
+  });
+
+  // Dropdown "Informasi"
+  const dropdownItem = document.querySelector('.navbar__item--dropdown');
+  const dropdownToggle = dropdownItem?.querySelector('.navbar__dropdown-toggle');
+
+  dropdownToggle?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isOpen = dropdownItem?.classList.toggle('is-open');
+    dropdownToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
+  });
+
+  // Tutup dropdown saat klik di luar
+  document.addEventListener('click', (e) => {
+    if (dropdownItem && !dropdownItem.contains(e.target)) {
+      dropdownItem.classList.remove('is-open');
+      dropdownToggle?.setAttribute('aria-expanded', 'false');
     }
   });
 
-  // --- Upload Bukti Transfer ---
-  uploadBtn.addEventListener('click', async () => {
-    uploadMsg.style.display = 'none';
-
-    if (!selectedFile) {
-      uploadMsg.textContent = 'Pilih file bukti transfer terlebih dahulu.';
-      uploadMsg.className = 'cek-upload__msg cek-upload__msg--error';
-      uploadMsg.style.display = 'block';
-      return;
-    }
-    if (!currentPendaftarId) {
-      uploadMsg.textContent = 'Data pendaftaran tidak valid. Cari ulang kode Anda.';
-      uploadMsg.className = 'cek-upload__msg cek-upload__msg--error';
-      uploadMsg.style.display = 'block';
-      return;
-    }
-
-    uploadBtnText.style.display = 'none';
-    uploadBtnLoading.style.display = 'inline';
-    uploadBtn.disabled = true;
-
-    try {
-      const ext = selectedFile.name.split('.').pop();
-      const fileName = `${resultKode.textContent}-${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('bukti-transfer')
-        .upload(fileName, selectedFile, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-      if (uploadError) throw new Error(uploadError.message);
-
-      const { data: publicUrlData } = supabase.storage
-        .from('bukti-transfer')
-        .getPublicUrl(fileName);
-      const publicUrl = publicUrlData.publicUrl;
-
-      const { error: updateError } = await supabase.rpc('update_bukti_transfer', {
-        p_kode: resultKode.textContent,
-        p_url: publicUrl,
-      })
-
-      if (updateError) throw new Error(updateError.message);
-
-      // Update tampilan
-      resultStatus.textContent = 'Menunggu Verifikasi';
-      resultStatus.className = 'cek-status-badge ' + statusClass('Menunggu Verifikasi');
-      uploadSection.style.display = 'none';
-      buktiAdaSection.style.display = 'block';
-      buktiLink.href = publicUrl;
-
-    } catch (err) {
-      uploadMsg.textContent = 'Gagal upload: ' + err.message;
-      uploadMsg.className = 'cek-upload__msg cek-upload__msg--error';
-      uploadMsg.style.display = 'block';
-    } finally {
-      uploadBtnText.style.display = 'inline';
-      uploadBtnLoading.style.display = 'none';
-      uploadBtn.disabled = false;
-    }
+  // Tutup menu mobile & dropdown saat link submenu diklik
+  menu?.querySelectorAll('.navbar__dropdown-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      menu.classList.remove('is-open');
+      toggle?.setAttribute('aria-expanded', 'false');
+      dropdownItem?.classList.remove('is-open');
+      dropdownToggle?.setAttribute('aria-expanded', 'false');
+    });
   });
 </script>
 
 <style>
-  /* ===== Tombol Cek Pendaftaran ===== */
-  .navbar__cek-btn {
-    background: #2563eb;
-    color: #ffffff;
-    border: none;
-    padding: 9px 18px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.88rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
-    white-space: nowrap;
-  }
-  .navbar__cek-btn:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
+  /* ===== DROPDOWN WRAPPER (Desktop) ===== */
+  .navbar__item--dropdown {
+    position: relative;
   }
 
-  /* ===== Modal ===== */
-  .cek-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: none;
+  .navbar__dropdown-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .navbar__dropdown-toggle {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-  }
-  .cek-modal.is-open {
-    display: flex;
-  }
-  .cek-modal__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(2px);
-  }
-  .cek-modal__card {
-    position: relative;
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 32px 28px;
-    max-width: 460px;
-    width: 100%;
-    max-height: 88vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-    animation: cekModalIn 0.2s ease;
-  }
-  @keyframes cekModalIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .cek-modal__close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: #f1f5f9;
+    width: 24px;
+    height: 24px;
+    background: none;
     border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
     cursor: pointer;
-    font-size: 0.95rem;
-    color: #64748b;
+    color: inherit;
+    padding: 0;
+    border-radius: 4px;
     transition: background 0.2s;
   }
-  .cek-modal__close:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-  }
-  .cek-modal__title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 4px 0;
-  }
-  .cek-modal__subtitle {
-    color: #64748b;
-    font-size: 0.88rem;
-    margin: 0 0 20px 0;
+
+  .navbar__dropdown-toggle:hover {
+    background: rgba(255, 255, 255, 0.15);
   }
 
-  /* ===== Search ===== */
-  .cek-search {
-    display: flex;
-    gap: 10px;
-  }
-  .cek-search__input {
-    flex: 1;
-    padding: 12px 14px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    font-family: inherit;
-  }
-  .cek-search__input:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
-  }
-  .cek-search__btn {
-    padding: 12px 20px;
-    background: #2563eb;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.2s;
-  }
-  .cek-search__btn:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-  .cek-search__btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+  .navbar.is-scrolled .navbar__dropdown-toggle:hover {
+    background: rgba(0, 0, 0, 0.06);
   }
 
-  .cek-error {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #b91c1c;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    margin-top: 14px;
+  .navbar__chevron {
+    transition: transform 0.25s ease;
   }
 
-  /* ===== Result ===== */
-  .cek-result {
-    margin-top: 20px;
-    background: #f8fafc;
+  .navbar__item--dropdown.is-open .navbar__chevron {
+    transform: rotate(180deg);
+  }
+
+  /* ===== DROPDOWN MENU (Desktop) ===== */
+  .navbar__dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    min-width: 220px;
+    background: var(--color-white);
     border-radius: 12px;
-    padding: 16px 18px;
-  }
-  .cek-result__row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #edf2f7;
-  }
-  .cek-result__row:last-of-type {
-    border-bottom: none;
-  }
-  .cek-result__label {
-    font-size: 0.8rem;
-    color: #64748b;
-    font-weight: 600;
-  }
-  .cek-result__value {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #0f172a;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
   }
 
-  .cek-status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-  .cek-status-badge--pending {
-    background: #fef3c7;
-    color: #92400e;
-  }
-  .cek-status-badge--review {
-    background: #dbeafe;
-    color: #1e40af;
-  }
-  .cek-status-badge--success {
-    background: #d1fae5;
-    color: #065f46;
-  }
-  .cek-status-badge--danger {
-    background: #fee2e2;
-    color: #991b1b;
+  .navbar__item--dropdown.is-open .navbar__dropdown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
   }
 
-  /* ===== Upload Bukti ===== */
-  .cek-upload {
-    margin-top: 6px;
-  }
-  .cek-upload__divider {
-    border-top: 1px solid #e2e8f0;
-    margin: 14px 0;
-  }
-  .cek-upload__label {
+  .navbar__dropdown-link {
     display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin-bottom: 8px;
-  }
-  .cek-upload__input {
-    width: 100%;
-    padding: 10px;
-    border: 1.5px dashed #cbd5e1;
-    border-radius: 10px;
-    background: #fff;
-    font-size: 0.85rem;
-    margin-bottom: 10px;
-  }
-  .cek-upload__preview {
-    max-width: 100%;
-    max-height: 160px;
+    padding: 10px 14px;
     border-radius: 8px;
-    margin-bottom: 10px;
-    display: block;
-  }
-  .cek-upload__btn {
-    width: 100%;
-    padding: 12px;
-    background: #16a34a;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .cek-upload__btn:hover:not(:disabled) {
-    background: #15803d;
-  }
-  .cek-upload__btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-  .cek-upload__msg {
-    margin-top: 10px;
-    font-size: 0.82rem;
-    padding: 8px 12px;
-    border-radius: 8px;
-  }
-  .cek-upload__msg--error {
-    background: #fef2f2;
-    color: #b91c1c;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-dark);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
   }
 
-  .cek-bukti-ada {
-    font-size: 0.85rem;
-    color: #065f46;
-  }
-  .cek-bukti-ada__link {
-    display: inline-block;
-    margin-top: 6px;
-    color: #2563eb;
-    font-weight: 600;
-    text-decoration: underline;
+  .navbar__dropdown-link:hover {
+    background: var(--color-bg, #f1f5f9);
+    color: var(--color-primary, #2563eb);
   }
 
-  /* ===== Responsive ===== */
-  @media (max-width: 640px) {
-    .navbar__cek-btn {
-      padding: 8px 12px;
-      font-size: 0.8rem;
-    }
-    .cek-modal__card {
-      padding: 24px 18px;
-    }
-  }
-</style>
-<style>
+  /* ===== NAVBAR UTAMA ===== */
   .navbar {
     position: fixed;
     top: 0;
@@ -676,13 +235,13 @@ function isActive(href: string) {
     right: 0;
     z-index: 999;
     background: transparent;
-    transition: background var(--transition-base), box-shadow var(--transition-base), padding var(--transition-base);
+    transition: background var(--transition-base, 0.3s), box-shadow var(--transition-base, 0.3s), padding var(--transition-base, 0.3s);
     padding-block: 22px;
   }
 
   .navbar.is-scrolled {
     background: var(--color-white);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     padding-block: 14px;
   }
 
@@ -702,7 +261,7 @@ function isActive(href: string) {
     font-weight: 700;
     font-size: 1.15rem;
     color: var(--color-white);
-    transition: color var(--transition-base);
+    transition: color var(--transition-base, 0.3s);
     letter-spacing: 0.02em;
   }
 
@@ -725,10 +284,10 @@ function isActive(href: string) {
     gap: 5px;
     font-size: 0.95rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(255, 255, 255, 0.9);
     position: relative;
     padding-block: 6px;
-    transition: color var(--transition-fast);
+    transition: color 0.2s;
     text-decoration: none;
     background: none;
     border: none;
@@ -744,7 +303,8 @@ function isActive(href: string) {
     width: 0%;
     height: 2px;
     background: var(--color-accent, #3b82f6);
-    transition: width var(--transition-fast);
+    border-radius: 2px;
+    transition: width 0.25s ease;
   }
 
   .navbar__link:hover,
@@ -763,59 +323,6 @@ function isActive(href: string) {
 
   .navbar.is-scrolled .navbar__link:hover,
   .navbar.is-scrolled .navbar__link.is-active {
-    color: var(--color-primary, #2563eb);
-  }
-
-  /* --- Dropdown "Informasi" — murni dikontrol oleh klik (class is-open) --- */
-  .navbar__item--dropdown {
-    position: relative;
-  }
-
-  .navbar__chevron {
-    transition: transform var(--transition-fast);
-  }
-
-  .navbar__item--dropdown.is-open .navbar__chevron {
-    transform: rotate(180deg);
-  }
-
-  .navbar__dropdown {
-    position: absolute;
-    top: calc(100% + 14px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-6px);
-    min-width: 220px;
-    background: var(--color-white);
-    border-radius: var(--radius-sm, 10px);
-    box-shadow: var(--shadow-lg, 0 12px 32px rgba(0,0,0,0.14));
-    padding: 8px;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
-  }
-
-  .navbar__item--dropdown.is-open .navbar__dropdown {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  .navbar__dropdown-link {
-    display: block;
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: var(--color-dark);
-    text-decoration: none;
-    transition: background var(--transition-fast);
-    white-space: nowrap;
-  }
-
-  .navbar__dropdown-link:hover {
-    background: var(--color-bg, #f1f5f9);
     color: var(--color-primary, #2563eb);
   }
 
@@ -841,16 +348,14 @@ function isActive(href: string) {
     width: 100%;
     height: 2px;
     background: var(--color-white);
-    transition: background var(--transition-fast);
+    transition: background 0.2s;
   }
 
   .navbar.is-scrolled .navbar__toggle span {
     background: var(--color-dark);
   }
 
-  /* ---------------------------------------------------------
-     Responsive: Tablet & Mobile
-  --------------------------------------------------------- */
+  /* ===== RESPONSIVE (Mobile) ===== */
   @media (max-width: 900px) {
     .navbar__toggle {
       display: flex;
@@ -866,7 +371,7 @@ function isActive(href: string) {
       box-shadow: var(--shadow-lg);
       padding: 100px 32px 32px;
       transform: translateX(100%);
-      transition: transform var(--transition-base);
+      transition: transform 0.3s ease;
       overflow-y: auto;
     }
 
@@ -896,9 +401,20 @@ function isActive(href: string) {
       width: 100%;
     }
 
+    .navbar__dropdown-wrapper {
+      width: 100%;
+      position: relative;
+    }
+
+    .navbar__dropdown-toggle {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
     .navbar__dropdown {
       position: static;
-      transform: none;
       opacity: 1;
       visibility: visible;
       pointer-events: auto;
@@ -908,7 +424,9 @@ function isActive(href: string) {
       padding: 4px;
       max-height: 0;
       overflow: hidden;
-      transition: max-height var(--transition-base);
+      transition: max-height 0.3s ease;
+      width: 100%;
+      transform: none;
     }
 
     .navbar__item--dropdown.is-open .navbar__dropdown {
@@ -916,55 +434,3 @@ function isActive(href: string) {
     }
   }
 </style>
-
-<script>
-  const navbar = document.getElementById('navbar');
-  const toggle = document.getElementById('navbarToggle');
-  const menu = document.getElementById('navbarMenu');
-
-  function handleScroll() {
-    if (!navbar) return;
-    if (window.scrollY > 40) {
-      navbar.classList.add('is-scrolled');
-    } else {
-      navbar.classList.remove('is-scrolled');
-    }
-  }
-
-  handleScroll();
-  window.addEventListener('scroll', handleScroll, { passive: true });
-
-  toggle?.addEventListener('click', () => {
-    const isOpen = menu?.classList.toggle('is-open');
-    toggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
-    navbar?.classList.toggle('is-scrolled', Boolean(isOpen) || window.scrollY > 40);
-  });
-
-  // Dropdown "Informasi" — toggle murni via klik, tetap terbuka sampai:
-  // (a) diklik lagi, (b) klik di luar area, atau (c) salah satu opsi dipilih
-  const dropdownItem = document.querySelector('.navbar__item--dropdown');
-  const dropdownTrigger = dropdownItem?.querySelector('.navbar__link--trigger');
-
-  dropdownTrigger?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const isOpen = dropdownItem?.classList.toggle('is-open');
-    dropdownTrigger.setAttribute('aria-expanded', String(Boolean(isOpen)));
-  });
-
-  document.addEventListener('click', (e) => {
-    if (dropdownItem && !dropdownItem.contains(e.target as Node)) {
-      dropdownItem.classList.remove('is-open');
-      dropdownTrigger?.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-  // Menutup menu mobile & dropdown saat salah satu opsi diklik
-  menu?.querySelectorAll('.navbar__dropdown-link').forEach((link) => {
-    link.addEventListener('click', () => {
-      menu.classList.remove('is-open');
-      toggle?.setAttribute('aria-expanded', 'false');
-      dropdownItem?.classList.remove('is-open');
-    });
-  });
-</script>
