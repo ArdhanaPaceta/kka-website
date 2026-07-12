@@ -1,80 +1,89 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: hero } = await supabase
-  .from('hero_content')
-  .select('*')
-  .single();
+// =============================================================
+// components/admin/HeroForm.astro
+// Panel ADMIN untuk kelola Hero (client-side, Tailwind)
+// =============================================================
 ---
 
-<div class="form-card">
-  <div class="card-header">
+<div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+  <div class="flex flex-col items-stretch gap-4 mb-7 sm:flex-row sm:items-start sm:justify-between">
     <div>
-      <h2>Kelola Hero</h2>
-      <p class="form-hint">Atur konten section hero (banner utama) yang tampil paling atas di halaman publik.</p>
+      <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola Hero</h2>
+      <p class="text-slate-500 text-sm m-0 leading-snug">Atur konten section hero (banner utama) yang tampil paling atas di halaman publik.</p>
     </div>
   </div>
 
-  <form id="heroForm" class="hero-form">
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="hEyebrow">Eyebrow <span class="field-optional">(opsional)</span></label>
-        <input type="text" id="hEyebrow" value={hero?.eyebrow || ''} placeholder="Kompetisi Kompetensi Akademik 2026" />
+  <!-- FORM -->
+  <form id="heroForm" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label class="font-semibold text-[0.87rem] text-slate-800">
+          Eyebrow <span class="font-normal text-slate-400 text-xs">(opsional)</span>
+        </label>
+        <input type="text" id="hEyebrow" placeholder="Kompetisi Kompetensi Akademik 2026"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="hJudul">Judul Utama <span class="field-required">*</span></label>
-        <input type="text" id="hJudul" value={hero?.judul || ''} placeholder="Raih Prestasi Terbaikmu" required />
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="hSubtitle">Subtitle / Deskripsi Singkat</label>
-      <textarea id="hSubtitle" rows="3" placeholder="Ikuti kompetisi akademik tingkat kabupaten...">{hero?.subtitle || ''}</textarea>
-    </div>
-
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="hTanggal">Tanggal Pelaksanaan</label>
-        <input type="date" id="hTanggal" value={hero?.tanggal_pelaksanaan || ''} />
-      </div>
-      <div class="field">
-        <label for="hLokasi">Lokasi</label>
-        <input type="text" id="hLokasi" value={hero?.lokasi || ''} placeholder="Gedung Serbaguna Kabupaten" />
+      <div class="flex flex-col gap-1.5">
+        <label class="font-semibold text-[0.87rem] text-slate-800">
+          Judul Utama <span class="text-red-600">*</span>
+        </label>
+        <input type="text" id="hJudul" placeholder="Raih Prestasi Terbaikmu" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
     </div>
 
-    <div class="field">
-      <label for="hGambarFile">Gambar Background</label>
-      <input type="file" id="hGambarFile" accept="image/*" />
-      <small class="field-hint">Upload gambar baru untuk mengganti gambar saat ini. Kosongkan jika tidak ingin mengganti.</small>
-      <div class="preview-wrapper">
-        <img
-          id="hPreview"
-          class="preview-img"
-          src={hero?.gambar_bg || ''}
-          style={hero?.gambar_bg ? 'display:block;' : 'display:none;'}
-          alt="Pratinjau gambar hero"
-        />
-      </div>
-      <input type="hidden" id="hGambarUrl" value={hero?.gambar_bg || ''} />
+    <div class="flex flex-col gap-1.5">
+      <label class="font-semibold text-[0.87rem] text-slate-800">Subtitle / Deskripsi Singkat</label>
+      <textarea id="hSubtitle" rows="3" placeholder="Ikuti kompetisi akademik tingkat kabupaten..."
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white resize-y min-h-[75px] focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition"></textarea>
     </div>
 
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="hTombolLabel">Label Tombol CTA</label>
-        <input type="text" id="hTombolLabel" value={hero?.tombol_label || ''} placeholder="Daftar Sekarang" />
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label class="font-semibold text-[0.87rem] text-slate-800">Tanggal Pelaksanaan</label>
+        <input type="date" id="hTanggal"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="hTombolHref">Link Tombol CTA</label>
-        <input type="text" id="hTombolHref" value={hero?.tombol_href || ''} placeholder="/regulasi#pendaftaran" />
+      <div class="flex flex-col gap-1.5">
+        <label class="font-semibold text-[0.87rem] text-slate-800">Lokasi</label>
+        <input type="text" id="hLokasi" placeholder="Gedung Serbaguna Kabupaten"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
     </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn-primary" id="hSubmitBtn">
-        <span class="save-icon">💾</span> Simpan Perubahan
+    <!-- Upload Gambar -->
+    <div class="flex flex-col gap-1.5">
+      <label class="font-semibold text-[0.87rem] text-slate-800">Gambar Background</label>
+      <input type="file" id="hGambarFile" accept="image/*"
+        class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+      <small class="text-slate-400 text-[0.78rem]">Upload gambar baru untuk mengganti gambar saat ini. Kosongkan jika tidak ingin mengganti.</small>
+      
+      <!-- Preview gambar -->
+      <div class="mt-2">
+        <img id="hPreview" class="max-w-full max-h-48 rounded-lg object-cover border border-slate-200 hidden" alt="Pratinjau gambar hero" />
+      </div>
+      <input type="hidden" id="hGambarUrl" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label class="font-semibold text-[0.87rem] text-slate-800">Label Tombol CTA</label>
+        <input type="text" id="hTombolLabel" placeholder="Daftar Sekarang"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="font-semibold text-[0.87rem] text-slate-800">Link Tombol CTA</label>
+        <input type="text" id="hTombolHref" placeholder="/regulasi#pendaftaran"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4 flex-wrap pt-2">
+      <button type="submit" id="hSubmitBtn"
+        class="inline-flex items-center gap-2 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed">
+        💾 Simpan Perubahan
       </button>
-      <span id="hStatus" class="status-text"></span>
+      <span id="hStatus" class="font-medium text-sm min-h-[1.8rem]"></span>
     </div>
   </form>
 </div>
@@ -83,7 +92,6 @@ const { data: hero } = await supabase
   import { supabase } from '../../lib/supabase';
 
   const BUCKET = 'hero';
-
   const heroForm = document.getElementById('heroForm');
   const hStatus = document.getElementById('hStatus');
   const hSubmitBtn = document.getElementById('hSubmitBtn');
@@ -91,29 +99,67 @@ const { data: hero } = await supabase
   const hPreview = document.getElementById('hPreview');
   const hGambarUrl = document.getElementById('hGambarUrl');
 
+  // --- Load data dari Supabase ---
+  async function loadData() {
+    try {
+      const { data, error } = await supabase.from('hero_content').select('*').single();
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+
+      if (data) {
+        document.getElementById('hEyebrow').value = data.eyebrow || '';
+        document.getElementById('hJudul').value = data.judul || '';
+        document.getElementById('hSubtitle').value = data.subtitle || '';
+        document.getElementById('hTanggal').value = data.tanggal_pelaksanaan || '';
+        document.getElementById('hLokasi').value = data.lokasi || '';
+        document.getElementById('hTombolLabel').value = data.tombol_label || '';
+        document.getElementById('hTombolHref').value = data.tombol_href || '';
+        hGambarUrl.value = data.gambar_bg || '';
+
+        if (data.gambar_bg) {
+          hPreview.src = data.gambar_bg;
+          hPreview.classList.remove('hidden');
+        }
+      }
+    } catch (err) {
+      console.error('Gagal memuat hero:', err);
+      hStatus.textContent = '❌ Gagal memuat data hero.';
+      hStatus.className = 'font-medium text-sm text-red-600';
+    }
+  }
+
+  loadData();
+
+  // --- Preview gambar ---
   hGambarFile.addEventListener('change', () => {
     const file = hGambarFile.files?.[0];
     if (file) {
       hPreview.src = URL.createObjectURL(file);
-      hPreview.style.display = 'block';
+      hPreview.classList.remove('hidden');
     } else {
-      hPreview.style.display = 'none';
+      // Kembalikan ke gambar sebelumnya jika ada
+      if (hGambarUrl.value) {
+        hPreview.src = hGambarUrl.value;
+        hPreview.classList.remove('hidden');
+      } else {
+        hPreview.classList.add('hidden');
+      }
     }
   });
 
+  // --- Submit ---
   heroForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const judul = document.getElementById('hJudul').value.trim();
     if (!judul) {
       hStatus.textContent = '⚠️ Judul utama wajib diisi.';
-      hStatus.style.color = '#f59e0b';
+      hStatus.className = 'font-medium text-sm text-amber-600';
       return;
     }
 
     hSubmitBtn.disabled = true;
     hStatus.textContent = '⏳ Menyimpan...';
-    hStatus.style.color = '#2563eb';
+    hStatus.className = 'font-medium text-sm text-blue-600';
 
     try {
       let gambarUrl = hGambarUrl.value;
@@ -130,7 +176,7 @@ const { data: hero } = await supabase
 
         if (uploadError) {
           hStatus.textContent = '❌ Gagal upload gambar: ' + uploadError.message;
-          hStatus.style.color = '#dc2626';
+          hStatus.className = 'font-medium text-sm text-red-600';
           hSubmitBtn.disabled = false;
           return;
         }
@@ -164,198 +210,17 @@ const { data: hero } = await supabase
 
       if (error) {
         hStatus.textContent = '❌ Gagal menyimpan: ' + error.message;
-        hStatus.style.color = '#dc2626';
+        hStatus.className = 'font-medium text-sm text-red-600';
       } else {
         hStatus.textContent = '✅ Tersimpan! Halaman akan dimuat ulang...';
-        hStatus.style.color = '#16a34a';
+        hStatus.className = 'font-medium text-sm text-emerald-700';
         setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
       hStatus.textContent = '❌ Terjadi kesalahan tak terduga.';
-      hStatus.style.color = '#dc2626';
+      hStatus.className = 'font-medium text-sm text-red-600';
     } finally {
       hSubmitBtn.disabled = false;
     }
   });
 </script>
-
-<style>
-  /* ----- CARD UTAMA ----- */
-  .form-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-card h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 0.2rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  /* ----- TOMBOL ----- */
-  .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    white-space: nowrap;
-  }
-  .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .save-icon {
-    font-size: 1rem;
-    line-height: 1;
-  }
-
-  /* ----- FORM ----- */
-  .hero-form {
-    margin-bottom: 0.5rem;
-  }
-
-  .form-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1e293b;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.65rem 0.75rem;
-    border: 1px solid #d1d9e6;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fff;
-    font-family: inherit;
-    width: 100%;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 60px;
-  }
-
-  .field-optional {
-    font-weight: 400;
-    color: #94a3b8;
-    font-size: 0.8rem;
-  }
-  .field-required {
-    color: #dc2626;
-    font-weight: 400;
-    font-size: 0.9rem;
-  }
-
-  .field-hint {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    margin-top: 0.2rem;
-  }
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .status-text {
-    font-weight: 500;
-    font-size: 0.95rem;
-    min-height: 1.8rem;
-  }
-
-  /* ----- PREVIEW GAMBAR ----- */
-  .preview-wrapper {
-    margin-top: 0.5rem;
-  }
-
-  .preview-img {
-    max-width: 100%;
-    max-height: 220px;
-    border-radius: 8px;
-    object-fit: cover;
-    border: 1px solid #e9edf4;
-    display: block;
-  }
-
-  /* ----- RESPONSIF ----- */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1rem;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .form-grid-2 {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .form-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-primary {
-      justify-content: center;
-    }
-    .preview-img {
-      max-height: 150px;
-    }
-  }
-</style>

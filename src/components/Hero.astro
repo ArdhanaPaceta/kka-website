@@ -1,51 +1,44 @@
 ---
-import { supabase } from '../lib/supabase';
-const { data: hero } = await supabase
-  .from('hero_content')
-  .select('*')
-  .single();
-
-const eventDate = hero?.tanggal_pelaksanaan
-  ? `${hero.tanggal_pelaksanaan}T08:00:00`
-  : '2026-10-17T08:00:00';
-
-const formattedDate = hero?.tanggal_pelaksanaan
-  ? new Date(hero.tanggal_pelaksanaan).toLocaleDateString('id-ID', {
-      day: 'numeric', month: 'long', year: 'numeric'
-    })
-  : '17 Oktober 2026';
+// ===========================================================
+// components/Hero.astro
+// Sekarang client‑side: data diambil dari Supabase di browser.
+// ===========================================================
 ---
 
 <section class="hero" id="beranda">
   <div class="hero__bg">
-    <img src={hero?.gambar_bg || '/images/hero.jpg'} alt="Suasana Kompetisi Kompetensi Akademik" />
+    <!-- Gambar background default (akan diganti jika data tersedia) -->
+    <img id="heroBgImg" src="/images/hero.jpg" alt="Suasana Kompetisi" />
     <div class="hero__overlay"></div>
   </div>
 
   <div class="container hero__content">
-    <span class="hero__eyebrow reveal">{hero?.eyebrow}</span>
+    <span class="hero__eyebrow reveal" id="heroEyebrow">
+      <!-- default -->
+      Kompetisi Kompetensi Akademik 2026
+    </span>
 
-    <h1 class="hero__title reveal reveal-delay-1">
-      {hero?.judul}
+    <h1 class="hero__title reveal reveal-delay-1" id="heroJudul">
+      Raih Prestasi Terbaikmu
     </h1>
 
-    <p class="hero__subtitle reveal reveal-delay-2">
-      {hero?.subtitle}
+    <p class="hero__subtitle reveal reveal-delay-2" id="heroSubtitle">
+      Ikuti kompetisi akademik tingkat kabupaten...
     </p>
 
     <div class="hero__meta reveal reveal-delay-2">
       <div class="hero__meta-item">
         <span class="hero__meta-label">Tanggal Pelaksanaan</span>
-        <span class="hero__meta-value">{formattedDate}</span>
+        <span class="hero__meta-value" id="heroTanggal">17 Oktober 2026</span>
       </div>
       <div class="hero__meta-divider"></div>
       <div class="hero__meta-item">
         <span class="hero__meta-label">Lokasi</span>
-        <span class="hero__meta-value">{hero?.lokasi}</span>
+        <span class="hero__meta-value" id="heroLokasi">Gedung Serbaguna</span>
       </div>
     </div>
 
-    <div class="hero__countdown reveal reveal-delay-3" id="countdown" data-target={eventDate}>
+    <div class="hero__countdown reveal reveal-delay-3" id="countdown" data-target="2026-10-17T08:00:00">
       <div class="countdown__box">
         <span class="countdown__number" id="cd-days">00</span>
         <span class="countdown__label">Hari</span>
@@ -65,13 +58,119 @@ const formattedDate = hero?.tanggal_pelaksanaan
     </div>
 
     <div class="hero__buttons reveal reveal-delay-4">
-      <a href={hero?.tombol_href || '/regulasi#pendaftaran'} class="btn btn-primary">{hero?.tombol_label || 'Daftar Sekarang'}</a>
+      <a id="heroTombol" href="/regulasi#pendaftaran" class="btn btn-primary">
+        Daftar Sekarang
+      </a>
       <a href="#tentang" class="btn btn-outline">Pelajari Lebih Lanjut</a>
     </div>
   </div>
 </section>
 
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  async function loadHero() {
+    try {
+      const { data: hero, error } = await supabase
+        .from('hero_content')
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      // Jika data tidak ada (tabel kosong), pertahankan nilai default
+      if (!hero) return;
+
+      // Update elemen dengan data dari database
+      document.getElementById('heroEyebrow').textContent = hero.eyebrow || '';
+      document.getElementById('heroJudul').textContent = hero.judul || 'Kompetisi Kompetensi Akademik';
+      document.getElementById('heroSubtitle').textContent = hero.subtitle || '';
+      document.getElementById('heroTanggal').textContent = hero.tanggal_pelaksanaan
+        ? new Date(hero.tanggal_pelaksanaan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '17 Oktober 2026';
+      document.getElementById('heroLokasi').textContent = hero.lokasi || '';
+
+      // Update gambar background
+      if (hero.gambar_bg) {
+        document.getElementById('heroBgImg').src = hero.gambar_bg;
+      }
+
+      // Update tombol CTA
+      const tombol = document.getElementById('heroTombol');
+      if (tombol) {
+        tombol.textContent = hero.tombol_label || 'Daftar Sekarang';
+        tombol.href = hero.tombol_href || '/regulasi#pendaftaran';
+      }
+
+      // Update countdown target
+      const countdownEl = document.getElementById('countdown');
+      if (countdownEl && hero.tanggal_pelaksanaan) {
+        countdownEl.dataset.target = `${hero.tanggal_pelaksanaan}T08:00:00`;
+        // Mulai ulang interval countdown (karena target berubah)
+        startCountdown(countdownEl.dataset.target);
+      }
+    } catch (err) {
+      console.error('Gagal memuat data hero:', err);
+      // Biarkan nilai default tetap tampil
+    }
+  }
+
+  // ====================== Countdown Logic ======================
+  let countdownInterval;
+
+  function startCountdown(targetDateString) {
+    // Hentikan interval sebelumnya
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    const target = new Date(targetDateString).getTime();
+
+    function update() {
+      const now = new Date().getTime();
+      const distance = target - now;
+
+      const daysEl = document.getElementById('cd-days');
+      const hoursEl = document.getElementById('cd-hours');
+      const minutesEl = document.getElementById('cd-minutes');
+      const secondsEl = document.getElementById('cd-seconds');
+
+      if (distance <= 0) {
+        if (daysEl) daysEl.textContent = '00';
+        if (hoursEl) hoursEl.textContent = '00';
+        if (minutesEl) minutesEl.textContent = '00';
+        if (secondsEl) secondsEl.textContent = '00';
+        clearInterval(countdownInterval);
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      if (daysEl) daysEl.textContent = String(days).padStart(2, '0');
+      if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+      if (minutesEl) minutesEl.textContent = String(minutes).padStart(2, '0');
+      if (secondsEl) secondsEl.textContent = String(seconds).padStart(2, '0');
+    }
+
+    update();
+    countdownInterval = setInterval(update, 1000);
+  }
+
+  // Mulai countdown dengan default target
+  const initialTarget = document.getElementById('countdown')?.dataset?.target || '2026-10-17T08:00:00';
+  startCountdown(initialTarget);
+
+  // Load data hero dari Supabase
+  loadHero();
+</script>
+
 <style>
+  /* ... Style persis sama seperti sebelumnya, TIDAK BERUBAH ... */
   .hero {
     position: relative;
     min-height: 100vh;
@@ -207,35 +306,7 @@ const formattedDate = hero?.tanggal_pelaksanaan
     flex-wrap: wrap;
   }
 
-  .hero__scroll-indicator {
-    position: absolute;
-    bottom: 32px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 26px;
-    height: 42px;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    border-radius: 20px;
-    z-index: 1;
-  }
-
-  .hero__scroll-indicator span {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 8px;
-    background: var(--color-accent);
-    border-radius: 2px;
-    animation: scroll-dot 1.6s infinite;
-  }
-
-  @keyframes scroll-dot {
-    0% { opacity: 1; top: 8px; }
-    100% { opacity: 0; top: 22px; }
-  }
-
+  /* Scroll indicator (opsional, tidak ada di kode, tapi bisa ditambahkan) */
   @media (max-width: 600px) {
     .countdown__box {
       width: 62px;
@@ -246,46 +317,3 @@ const formattedDate = hero?.tanggal_pelaksanaan
     }
   }
 </style>
-
-<script>
-  // ===========================================================
-  // Countdown Timer — Vanilla JavaScript
-  // ===========================================================
-  const countdownEl = document.getElementById('countdown');
-  const target = countdownEl ? new Date(countdownEl.dataset.target || '').getTime() : 0;
-
-  const daysEl = document.getElementById('cd-days');
-  const hoursEl = document.getElementById('cd-hours');
-  const minutesEl = document.getElementById('cd-minutes');
-  const secondsEl = document.getElementById('cd-seconds');
-
-  function pad(num: number) {
-    return String(num).padStart(2, '0');
-  }
-
-  function updateCountdown() {
-    const now = new Date().getTime();
-    const distance = target - now;
-
-    if (distance <= 0) {
-      if (daysEl) daysEl.textContent = '00';
-      if (hoursEl) hoursEl.textContent = '00';
-      if (minutesEl) minutesEl.textContent = '00';
-      if (secondsEl) secondsEl.textContent = '00';
-      return;
-    }
-
-    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-    if (daysEl) daysEl.textContent = pad(days);
-    if (hoursEl) hoursEl.textContent = pad(hours);
-    if (minutesEl) minutesEl.textContent = pad(minutes);
-    if (secondsEl) secondsEl.textContent = pad(seconds);
-  }
-
-  updateCountdown();
-  setInterval(updateCountdown, 1000);
-</script>
