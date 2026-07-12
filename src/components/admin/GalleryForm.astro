@@ -1,88 +1,87 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: galeri } = await supabase
-  .from('galeri')
-  .select('*')
-  .order('created_at', { ascending: false });
+// TIDAK ADA fetch data di frontmatter.
+// Semua fetch + render list dipindah ke client-side script di bawah.
+// Styling pakai Tailwind utility classes (aman dari isu Astro CSS scoping).
 ---
 
-<div class="form-card">
-  <div class="card-header">
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+  <div class="flex items-center justify-between mb-6">
     <div>
-      <h2>Kelola Galeri</h2>
-      <p class="form-hint">Upload, lihat, atau hapus foto yang tampil di galeri halaman publik.</p>
+      <h2 class="text-xl font-bold text-slate-800">Kelola Galeri</h2>
+      <p class="text-sm text-slate-500 mt-1">Upload, lihat, atau hapus foto yang tampil di galeri halaman publik.</p>
     </div>
-    <span class="badge-count">{galeri?.length ?? 0} Foto</span>
+    <span id="galeriCount" class="text-xs font-semibold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full">
+      0 Foto
+    </span>
   </div>
 
   <!-- FORM UPLOAD -->
-  <form id="galleryForm" class="gallery-upload-form">
-    <div class="upload-area" id="uploadArea">
-      <div class="upload-placeholder">
-        <span class="upload-icon">🖼️</span>
-        <p>Klik atau seret gambar ke sini</p>
-        <span class="upload-hint">Format JPG, PNG, WEBP (Maks. 5MB)</span>
+  <form id="galleryForm" class="space-y-4">
+    <div
+      id="uploadArea"
+      class="relative border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
+    >
+      <div class="upload-placeholder flex flex-col items-center gap-2 pointer-events-none">
+        <span class="text-4xl">🖼️</span>
+        <p class="text-sm font-medium text-slate-600">Klik atau seret gambar ke sini</p>
+        <span class="text-xs text-slate-400">Format JPG, PNG, WEBP (Maks. 5MB)</span>
       </div>
-      <input type="file" id="gImageFile" accept="image/*" required />
-      <img id="gPreview" class="preview-img" style="display:none;" alt="Pratinjau gambar" />
+      <input
+        type="file"
+        id="gImageFile"
+        accept="image/*"
+        required
+        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
+      <img id="gPreview" class="hidden mx-auto max-h-52 rounded-lg object-contain" alt="Pratinjau gambar" />
     </div>
 
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="gJudul">Judul Foto</label>
-        <input type="text" id="gJudul" placeholder="Contoh: Pembukaan Kompetisi 2025" required />
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="gJudul" class="block text-sm font-medium text-slate-700 mb-1">Judul Foto</label>
+        <input
+          type="text"
+          id="gJudul"
+          placeholder="Contoh: Pembukaan Kompetisi 2025"
+          required
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
-      <div class="field">
-        <label for="gDeskripsi">Deskripsi (opsional)</label>
-        <input type="text" id="gDeskripsi" placeholder="Keterangan singkat foto..." />
+      <div>
+        <label for="gDeskripsi" class="block text-sm font-medium text-slate-700 mb-1">Deskripsi (opsional)</label>
+        <input
+          type="text"
+          id="gDeskripsi"
+          placeholder="Keterangan singkat foto..."
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
     </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn-primary" id="gSubmitBtn">
-        <span class="plus-icon">↑</span> Upload Foto
+    <div class="flex items-center gap-3">
+      <button
+        type="submit"
+        id="gSubmitBtn"
+        class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
+      >
+        <span>↑</span> Upload Foto
       </button>
-      <span id="gStatus" class="status-text"></span>
+      <span id="gStatus" class="text-sm"></span>
     </div>
   </form>
 
-  <hr class="form-divider" />
+  <hr class="my-6 border-slate-200" />
 
-  <!-- GRID GALERI -->
-  <div class="section-header">
-    <h3>Semua Foto</h3>
-  </div>
+  <h3 class="text-base font-semibold text-slate-800 mb-4">Semua Foto</h3>
 
-  <div id="galleryList" class="gallery-grid">
-    {(galeri ?? []).length === 0 ? (
-      <div class="empty-state">
-        <span class="empty-icon">📸</span>
-        <p>Belum ada foto di galeri.</p>
-        <span class="empty-sub">Upload foto pertama menggunakan form di atas.</span>
-      </div>
-    ) : (
-      galeri.map((item) => (
-        <div class="gallery-item" data-id={item.id}>
-          <div class="gallery-item__image">
-            <img src={item.url_gambar} alt={item.judul_foto || 'Foto galeri'} loading="lazy" />
-          </div>
-          <div class="gallery-item__info">
-            <strong>{item.judul_foto || '(Tanpa judul)'}</strong>
-            {item.deskripsi && <p class="gallery-item__desc">{item.deskripsi}</p>}
-            <small>{new Date(item.created_at).toLocaleString('id-ID')}</small>
-          </div>
-          <button
-            type="button"
-            class="btn-delete"
-            data-id={item.id}
-            data-path={item.path_gambar}
-          >
-            Hapus
-          </button>
-        </div>
-      ))
-    )}
+  <p id="galeriLoading" class="text-sm text-slate-400 py-8 text-center">Memuat data galeri...</p>
+
+  <div id="galleryList" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+  <div id="galeriEmpty" class="hidden flex-col items-center gap-2 py-10 text-center">
+    <span class="text-4xl">📸</span>
+    <p class="text-sm font-medium text-slate-600" id="galeriEmptyText">Belum ada foto di galeri.</p>
+    <span class="text-xs text-slate-400">Upload foto pertama menggunakan form di atas.</span>
   </div>
 </div>
 
@@ -97,33 +96,129 @@ const { data: galeri } = await supabase
   const gPreview = document.getElementById('gPreview');
   const gSubmitBtn = document.getElementById('gSubmitBtn');
   const uploadArea = document.getElementById('uploadArea');
+  const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder');
+
+  const galeriCountEl = document.getElementById('galeriCount');
+  const galeriLoadingEl = document.getElementById('galeriLoading');
+  const galeriEmptyEl = document.getElementById('galeriEmpty');
+  const galeriEmptyText = document.getElementById('galeriEmptyText');
+  const galleryListEl = document.getElementById('galleryList');
+
+  function setStatus(msg, colorClass) {
+    gStatus.textContent = msg;
+    gStatus.className = 'text-sm ' + colorClass;
+  }
+
+  // --- Fetch & render list (client-side, selalu fresh) ---
+  async function loadGaleri() {
+    galeriLoadingEl.classList.remove('hidden');
+    galeriEmptyEl.classList.add('hidden');
+    galeriEmptyEl.classList.remove('flex');
+    galleryListEl.classList.add('hidden');
+
+    try {
+      const { data: galeri, error } = await supabase
+        .from('galeri')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      galeriLoadingEl.classList.add('hidden');
+      galeriCountEl.textContent = `${galeri?.length ?? 0} Foto`;
+
+      if (!galeri || galeri.length === 0) {
+        galeriEmptyEl.classList.remove('hidden');
+        galeriEmptyEl.classList.add('flex');
+        return;
+      }
+
+      galleryListEl.classList.remove('hidden');
+      galleryListEl.innerHTML = galeri.map((item) => `
+        <div class="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-id="${item.id}">
+          <div class="aspect-video bg-slate-100 overflow-hidden">
+            <img src="${item.url_gambar}" alt="${(item.judul_foto || 'Foto galeri').replace(/"/g, '&quot;')}" loading="lazy" class="w-full h-full object-cover" />
+          </div>
+          <div class="p-3 flex-1 flex flex-col gap-1">
+            <strong class="text-sm text-slate-800">${item.judul_foto || '(Tanpa judul)'}</strong>
+            ${item.deskripsi ? `<p class="text-xs text-slate-500">${item.deskripsi}</p>` : ''}
+            <small class="text-xs text-slate-400">${new Date(item.created_at).toLocaleString('id-ID')}</small>
+          </div>
+          <button
+            type="button"
+            class="btn-delete m-3 mt-0 inline-flex items-center justify-center gap-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+            data-id="${item.id}"
+            data-path="${item.path_gambar || ''}"
+          >
+            🗑️ Hapus
+          </button>
+        </div>
+      `).join('');
+
+      attachDeleteEvents();
+    } catch (err) {
+      galeriLoadingEl.classList.add('hidden');
+      galeriEmptyEl.classList.remove('hidden');
+      galeriEmptyEl.classList.add('flex');
+      galeriEmptyText.textContent = 'Gagal memuat data galeri.';
+      console.error('Gagal fetch galeri:', err);
+    }
+  }
+
+  function attachDeleteEvents() {
+    document.querySelectorAll('.btn-delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Yakin ingin menghapus foto ini dari galeri?')) return;
+
+        const id = btn.dataset.id;
+        const path = btn.dataset.path;
+        btn.disabled = true;
+        btn.textContent = 'Menghapus...';
+
+        try {
+          const { error: dbError } = await supabase.from('galeri').delete().eq('id', id);
+          if (dbError) throw dbError;
+
+          if (path) {
+            await supabase.storage.from(BUCKET).remove([path]);
+          }
+
+          await loadGaleri();
+        } catch (err) {
+          alert('Gagal menghapus data: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = '🗑️ Hapus';
+        }
+      });
+    });
+  }
 
   // Preview image when selected
   gImageFile.addEventListener('change', () => {
     const file = gImageFile.files?.[0];
     if (file) {
       gPreview.src = URL.createObjectURL(file);
-      gPreview.style.display = 'block';
-      uploadArea.querySelector('.upload-placeholder').style.display = 'none';
+      gPreview.classList.remove('hidden');
+      uploadPlaceholder.classList.add('hidden');
     } else {
-      gPreview.style.display = 'none';
-      uploadArea.querySelector('.upload-placeholder').style.display = 'block';
+      gPreview.classList.add('hidden');
+      uploadPlaceholder.classList.remove('hidden');
     }
   });
 
   // Drag and drop support
   uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('dragover');
+    uploadArea.classList.add('border-blue-500', 'bg-blue-50');
   });
 
   uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
+    uploadArea.classList.remove('border-blue-500', 'bg-blue-50');
   });
 
   uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('dragover');
+    uploadArea.classList.remove('border-blue-500', 'bg-blue-50');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       gImageFile.files = files;
@@ -137,21 +232,17 @@ const { data: galeri } = await supabase
 
     const file = gImageFile.files?.[0];
     if (!file) {
-      gStatus.textContent = '⚠️ Silakan pilih gambar terlebih dahulu.';
-      gStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Silakan pilih gambar terlebih dahulu.', 'text-amber-600');
       return;
     }
 
-    // Validasi ukuran file (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      gStatus.textContent = '⚠️ Ukuran file terlalu besar. Maksimal 5MB.';
-      gStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Ukuran file terlalu besar. Maksimal 5MB.', 'text-amber-600');
       return;
     }
 
     gSubmitBtn.disabled = true;
-    gStatus.textContent = '⏳ Mengunggah gambar...';
-    gStatus.style.color = '#2563eb';
+    setStatus('⏳ Mengunggah gambar...', 'text-blue-600');
 
     try {
       const ext = file.name.split('.').pop();
@@ -162,8 +253,7 @@ const { data: galeri } = await supabase
         .upload(fileName, file);
 
       if (uploadError) {
-        gStatus.textContent = '❌ Gagal upload: ' + uploadError.message;
-        gStatus.style.color = '#dc2626';
+        setStatus('❌ Gagal upload: ' + uploadError.message, 'text-red-600');
         return;
       }
 
@@ -181,48 +271,25 @@ const { data: galeri } = await supabase
       const { error: insertError } = await supabase.from('galeri').insert(payload);
 
       if (insertError) {
-        gStatus.textContent = '❌ Gagal menyimpan data: ' + insertError.message;
-        gStatus.style.color = '#dc2626';
+        setStatus('❌ Gagal menyimpan data: ' + insertError.message, 'text-red-600');
         await supabase.storage.from(BUCKET).remove([fileName]);
         return;
       }
 
-      gStatus.textContent = '✅ Foto berhasil diupload!';
-      gStatus.style.color = '#16a34a';
+      setStatus('✅ Foto berhasil diupload!', 'text-green-600');
       galleryForm.reset();
-      gPreview.style.display = 'none';
-      uploadArea.querySelector('.upload-placeholder').style.display = 'block';
-      setTimeout(() => window.location.reload(), 1000);
+      gPreview.classList.add('hidden');
+      uploadPlaceholder.classList.remove('hidden');
+      await loadGaleri();
     } catch (err) {
-      gStatus.textContent = '❌ Terjadi kesalahan tak terduga.';
-      gStatus.style.color = '#dc2626';
+      setStatus('❌ Terjadi kesalahan tak terduga.', 'text-red-600');
     } finally {
       gSubmitBtn.disabled = false;
     }
   });
 
-  // Delete buttons
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Yakin ingin menghapus foto ini dari galeri?')) return;
-
-      const id = btn.dataset.id;
-      const path = btn.dataset.path;
-
-      const { error: dbError } = await supabase.from('galeri').delete().eq('id', id);
-
-      if (dbError) {
-        alert('Gagal menghapus data: ' + dbError.message);
-        return;
-      }
-
-      if (path) {
-        await supabase.storage.from(BUCKET).remove([path]);
-      }
-
-      window.location.reload();
-    });
-  });
+  // Initial load
+  loadGaleri();
 </script>
 
 <style>
