@@ -1,10 +1,8 @@
 ---
-import { supabase } from '../lib/supabase';
-
-const { data: faqs } = await supabase
-  .from('faqs')
-  .select('*')
-  .order('urutan', { ascending: true });
+// =============================================================
+// components/FAQ.astro
+// Section FAQ – client‑side fetching + accordion
+// =============================================================
 ---
 
 <section class="faq section" id="faq">
@@ -17,24 +15,133 @@ const { data: faqs } = await supabase
       </p>
     </div>
 
-    <div class="faq__list">
-      {(faqs ?? []).map((item, i) => (
-        <div class:list={['faq__item', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
-          <button class="faq__question" aria-expanded="false">
-            <span>{item.pertanyaan}</span>
-            <span class="faq__icon">+</span>
-          </button>
-          <div class="faq__answer">
-            <p>{item.jawaban}</p>
-          </div>
-        </div>
-      ))}
+    <!-- Loading state -->
+    <div id="faqLoading" class="text-center py-10 text-slate-500">
+      <span class="text-2xl block mb-2">⏳</span>
+      Memuat FAQ...
     </div>
+
+    <!-- Empty state -->
+    <div id="faqEmpty" class="text-center py-10 text-slate-500" style="display:none;">
+      <span class="text-2xl block mb-2">❓</span>
+      Belum ada pertanyaan yang tersedia.
+    </div>
+
+    <!-- Error state -->
+    <div id="faqError" class="text-center py-10 text-red-600" style="display:none;"></div>
+
+    <!-- FAQ List (diisi via JS) -->
+    <div id="faqList" class="faq__list" style="display:none;"></div>
   </div>
 </section>
 
+<script type="module">
+  import { supabase } from '../lib/supabase';
+
+  const loadingEl = document.getElementById('faqLoading');
+  const emptyEl = document.getElementById('faqEmpty');
+  const errorEl = document.getElementById('faqError');
+  const listEl = document.getElementById('faqList');
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function renderList(items) {
+    // CATATAN: class "reveal"/"reveal-delay-X" SENGAJA tidak dipakai di sini.
+    // Elemen ini muncul async setelah fetch selesai, sehingga
+    // IntersectionObserver scroll-animation global (yang hanya observe
+    // elemen yang ada saat DOMContentLoaded) tidak pernah "melihat" elemen
+    // ini -> opacity tetap 0 selamanya walau datanya ada. Menghapus class
+    // ini di sumbernya jauh lebih sederhana & stabil dibanding menambal
+    // dengan fallback ScrollReveal.sync() atau setTimeout manual.
+    listEl.innerHTML = items.map((item) => `
+      <div class="faq__item">
+        <button class="faq__question" aria-expanded="false">
+          <span>${escapeHtml(item.pertanyaan)}</span>
+          <span class="faq__icon">+</span>
+        </button>
+        <div class="faq__answer">
+          <p>${escapeHtml(item.jawaban)}</p>
+        </div>
+      </div>
+    `).join('');
+
+    attachAccordionEvents();
+  }
+
+  function attachAccordionEvents() {
+    const items = listEl.querySelectorAll('.faq__item');
+
+    items.forEach((item) => {
+      const question = item.querySelector('.faq__question');
+      const answer = item.querySelector('.faq__answer');
+
+      question?.addEventListener('click', () => {
+        const isOpen = item.classList.contains('is-open');
+
+        // Tutup semua item lain
+        items.forEach((other) => {
+          other.classList.remove('is-open');
+          other.querySelector('.faq__question')?.setAttribute('aria-expanded', 'false');
+          const otherAnswer = other.querySelector('.faq__answer');
+          if (otherAnswer) otherAnswer.style.maxHeight = '0px';
+        });
+
+        if (!isOpen && answer) {
+          item.classList.add('is-open');
+          question.setAttribute('aria-expanded', 'true');
+          answer.style.maxHeight = `${answer.scrollHeight}px`;
+        }
+      });
+    });
+  }
+
+  async function loadFaqs() {
+    loadingEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    listEl.style.display = 'none';
+
+    try {
+      const { data, error } = await supabase
+        .from('faqs')
+        .select('*')
+        .order('urutan', { ascending: true });
+
+      if (error) throw error;
+
+      loadingEl.style.display = 'none';
+
+      if (!data || data.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      listEl.style.display = 'flex';
+      renderList(data);
+    } catch (err) {
+      console.error('Gagal fetch FAQ:', err);
+      loadingEl.style.display = 'none';
+      errorEl.textContent = `❌ Gagal memuat FAQ: ${err.message || err}`;
+      errorEl.style.display = 'block';
+    }
+  }
+
+  loadFaqs();
+</script>
+
 <style>
-  .faq__list {
+  /* PENTING: elemen di dalam #faqList dibuat lewat innerHTML, jadi TIDAK
+     mendapat atribut scoping otomatis dari Astro. Semua selector untuk
+     elemen tersebut WAJIB dibungkus :global(...) supaya CSS ini benar-benar
+     berlaku, kalau tidak FAQ akan tampil polos tanpa styling. */
+
+  :global(.faq__list) {
     max-width: 800px;
     margin-inline: auto;
     display: flex;
@@ -42,14 +149,19 @@ const { data: faqs } = await supabase
     gap: 14px;
   }
 
-  .faq__item {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
+  :global(.faq__item) {
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-sm, 10px);
     overflow: hidden;
-    background: var(--color-white);
+    background: var(--color-white, #fff);
+    transition: box-shadow 0.3s;
   }
 
-  .faq__question {
+  :global(.faq__item:hover) {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  :global(.faq__question) {
     width: 100%;
     display: flex;
     align-items: center;
@@ -59,10 +171,14 @@ const { data: faqs } = await supabase
     font-weight: 600;
     font-size: 0.98rem;
     text-align: left;
-    color: var(--color-dark);
+    color: var(--color-dark, #1e293b);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
   }
 
-  .faq__icon {
+  :global(.faq__icon) {
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -71,57 +187,38 @@ const { data: faqs } = await supabase
     height: 28px;
     border-radius: 50%;
     background: rgba(37, 99, 235, 0.08);
-    color: var(--color-secondary);
+    color: var(--color-secondary, #2563eb);
     font-size: 1.1rem;
-    transition: transform var(--transition-fast), background var(--transition-fast);
+    transition: transform 0.3s, background 0.3s, color 0.3s;
   }
 
-  .faq__item.is-open .faq__icon {
+  :global(.faq__item.is-open .faq__icon) {
     transform: rotate(45deg);
-    background: var(--color-secondary);
-    color: var(--color-white);
+    background: var(--color-secondary, #2563eb);
+    color: #fff;
   }
 
-  .faq__answer {
+  :global(.faq__answer) {
     max-height: 0;
     overflow: hidden;
-    transition: max-height var(--transition-base);
+    transition: max-height 0.3s ease;
   }
 
-  .faq__answer p {
+  :global(.faq__answer p) {
     padding: 0 24px 20px;
-    color: var(--color-gray);
+    color: var(--color-gray, #64748b);
     font-size: 0.92rem;
     line-height: 1.7;
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    :global(.faq__question) {
+      padding: 16px 18px;
+      font-size: 0.9rem;
+    }
+    :global(.faq__answer p) {
+      padding: 0 18px 16px;
+    }
   }
 </style>
-
-<script>
-  // ===========================================================
-  // Accordion FAQ — Vanilla JavaScript
-  // ===========================================================
-  const items = document.querySelectorAll<HTMLDivElement>('.faq__item');
-
-  items.forEach((item) => {
-    const question = item.querySelector('.faq__question');
-    const answer = item.querySelector<HTMLDivElement>('.faq__answer');
-
-    question?.addEventListener('click', () => {
-      const isOpen = item.classList.contains('is-open');
-
-      // Tutup semua item lain
-      items.forEach((other) => {
-        other.classList.remove('is-open');
-        other.querySelector('.faq__question')?.setAttribute('aria-expanded', 'false');
-        const otherAnswer = other.querySelector<HTMLDivElement>('.faq__answer');
-        if (otherAnswer) otherAnswer.style.maxHeight = '0px';
-      });
-
-      if (!isOpen && answer) {
-        item.classList.add('is-open');
-        question.setAttribute('aria-expanded', 'true');
-        answer.style.maxHeight = `${answer.scrollHeight}px`;
-      }
-    });
-  });
-</script>

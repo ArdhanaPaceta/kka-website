@@ -1,164 +1,283 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: jadwalList } = await supabase
-  .from('jadwal_kompetisi')
-  .select('*')
-  .order('tanggal', { ascending: true });
+// =============================================================
+// components/admin/JadwalForm.astro
+// Panel ADMIN untuk kelola Jadwal (client‑side, Tailwind)
+// =============================================================
 ---
 
-<div class="form-card">
-  <div class="card-header">
+<div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
     <div>
-      <h2>Kelola Jadwal</h2>
-      <p class="form-hint">Atur rangkaian jadwal kegiatan kompetisi yang tampil di halaman publik.</p>
+      <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola Jadwal</h2>
+      <p class="text-slate-500 text-sm m-0 leading-snug">Atur rangkaian jadwal kegiatan kompetisi yang tampil di halaman publik.</p>
     </div>
-    <button type="button" id="btnTambahJadwal" class="btn-primary btn-add">
-      <span class="plus-icon">+</span> Tambah Jadwal
+    <button type="button" id="btnTambahJadwal" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-purple-600 to-purple-700 text-black font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(147,51,234,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(147,51,234,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap">
+      <span class="text-lg leading-none">+</span> Tambah Jadwal
     </button>
   </div>
 
-  <!-- LIST JADWAL -->
-  <div id="jadwalListEl" class="jadwal-list">
-    {(jadwalList ?? []).length === 0 ? (
-      <div class="empty-state">
-        <span class="empty-icon">📅</span>
-        <p>Belum ada jadwal.</p>
-        <span class="empty-sub">Klik tombol "Tambah Jadwal" untuk mulai.</span>
-      </div>
-    ) : (
-      jadwalList.map((item) => (
-        <div class="jadwal-item" data-id={item.id}>
-          <div class="jadwal-item__content">
-            <div class="jadwal-item__header">
-              <span class="jadwal-item__date">
-                {new Date(item.tanggal).toLocaleDateString('id-ID', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </span>
-              <span class="badge-tanggal">📌 {new Date(item.tanggal).toLocaleDateString('id-ID', {
-                weekday: 'long',
-              })}</span>
-            </div>
-            <strong class="jadwal-item__judul">{item.judul}</strong>
-            {item.deskripsi && <p class="jadwal-item__desc">{item.deskripsi}</p>}
-          </div>
-          <div class="jadwal-item__actions">
-            <button
-              type="button"
-              class="btn-edit"
-              data-id={item.id}
-              data-tanggal={item.tanggal}
-              data-judul={item.judul}
-              data-deskripsi={item.deskripsi || ''}
-            >Edit</button>
-            <button type="button" class="btn-delete" data-id={item.id}>Hapus</button>
-          </div>
-        </div>
-      ))
-    )}
+  <!-- Error banner -->
+  <div id="jadwalErrorBanner" class="hidden items-start gap-2.5 bg-red-50 border border-red-200 px-4 py-3.5 rounded-[10px] mb-6">
+    <span class="text-lg leading-snug">⚠️</span>
+    <div>
+      <p class="m-0 text-red-700 text-sm leading-snug"><strong>Gagal memuat data:</strong> <span id="jadwalErrorMsg"></span></p>
+      <p class="text-[0.82rem] text-red-800 mt-1">Pastikan tabel "jadwal_kompetisi" ada dan RLS mengizinkan SELECT.</p>
+    </div>
   </div>
 
-  <!-- FORM TAMBAH/EDIT -->
-  <div id="jadwalForm" class="jadwal-form hidden">
-    <hr class="form-divider" />
-    <h3 id="jadwalFormTitle">Tambah Jadwal</h3>
+  <!-- Loading state -->
+  <div id="jadwalLoadingState" class="text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <div class="text-[1.8rem] mb-2">⏳</div>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Memuat data jadwal...</p>
+  </div>
+
+  <!-- List jadwal (diisi via JS) -->
+  <div id="jadwalListEl" class="hidden flex-col gap-2.5 mb-6"></div>
+
+  <!-- Empty state -->
+  <div id="jadwalEmptyState" class="hidden text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <span class="text-2xl mb-2 block">📅</span>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Belum ada jadwal.</p>
+    <span class="text-sm text-slate-400">Klik tombol "Tambah Jadwal" untuk mulai.</span>
+  </div>
+
+  <!-- Form Tambah/Edit -->
+  <form id="jadwalForm" class="hidden overflow-hidden max-h-0 opacity-0 -translate-y-1.5 transition-all duration-300 ease-in-out">
+    <hr class="border-0 border-t-2 border-slate-200 my-2 mb-5" />
+    <h3 id="jadwalFormTitle" class="text-[1.1rem] font-bold text-slate-900 mb-5">Tambah Jadwal</h3>
     <input type="hidden" id="jadwalId" />
 
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="jTanggal">Tanggal</label>
-        <input type="date" id="jTanggal" required />
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="jTanggal" class="font-semibold text-[0.87rem] text-slate-800">Tanggal</label>
+        <input type="date" id="jTanggal" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="jJudul">Judul Kegiatan</label>
-        <input type="text" id="jJudul" placeholder="Contoh: Pendaftaran Dibuka" required />
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="jJudul" class="font-semibold text-[0.87rem] text-slate-800">Judul Kegiatan</label>
+        <input type="text" id="jJudul" placeholder="Contoh: Pendaftaran Dibuka" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition" />
       </div>
     </div>
 
-    <div class="field">
-      <label for="jDeskripsi">Deskripsi (opsional)</label>
-      <textarea
-        id="jDeskripsi"
-        rows="3"
-        placeholder="Contoh: Pendaftaran peserta resmi dibuka untuk seluruh jenjang."
-      ></textarea>
+    <div class="flex flex-col gap-1.5 mb-4">
+      <label for="jDeskripsi" class="font-semibold text-[0.87rem] text-slate-800">Deskripsi <span class="font-normal text-slate-400 text-xs">(opsional)</span></label>
+      <textarea id="jDeskripsi" rows="3" placeholder="Contoh: Pendaftaran peserta resmi dibuka untuk seluruh jenjang."
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white resize-y min-h-[75px] focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition"></textarea>
     </div>
 
-    <p class="status-text" id="jStatus"></p>
+    <p id="jStatus" class="font-medium text-sm rounded-lg transition mb-4"></p>
 
-    <div class="form-actions">
-      <button type="button" id="btnBatalJadwal" class="btn-outline">Batal</button>
-      <button type="submit" class="btn-primary" id="jSubmitBtn">Simpan Jadwal</button>
+    <div class="flex gap-3 flex-wrap">
+      <button type="button" id="btnBatalJadwal" class="bg-transparent border border-slate-300 text-slate-600 px-5 py-2.5 rounded-xl font-medium hover:bg-slate-100 hover:border-slate-400 transition">Batal</button>
+      <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-purple-600 to-purple-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(147,51,234,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(147,51,234,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0">Simpan Jadwal</button>
     </div>
-  </div>
+  </form>
 </div>
 
 <script type="module">
   import { supabase } from '../../lib/supabase';
 
+  // --- DOM Elements ---
   const btnTambahJadwal = document.getElementById('btnTambahJadwal');
   const jadwalForm = document.getElementById('jadwalForm');
   const btnBatalJadwal = document.getElementById('btnBatalJadwal');
   const jadwalFormTitle = document.getElementById('jadwalFormTitle');
   const jadwalId = document.getElementById('jadwalId');
   const jStatus = document.getElementById('jStatus');
-  const jSubmitBtn = document.getElementById('jSubmitBtn');
+  const jadwalListEl = document.getElementById('jadwalListEl');
+  const jadwalEmptyState = document.getElementById('jadwalEmptyState');
+  const jadwalLoadingState = document.getElementById('jadwalLoadingState');
+  const errorBanner = document.getElementById('jadwalErrorBanner');
+  const errorMsg = document.getElementById('jadwalErrorMsg');
 
-  function resetJadwalForm() {
+  // --- State Management ---
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorBanner.classList.remove('hidden');
+    errorBanner.classList.add('flex');
+  }
+
+  function hideError() {
+    errorBanner.classList.add('hidden');
+    errorBanner.classList.remove('flex');
+  }
+
+  function showLoading() {
+    jadwalLoadingState.classList.remove('hidden');
+    jadwalListEl.classList.add('hidden');
+    jadwalListEl.classList.remove('flex');
+    jadwalEmptyState.classList.add('hidden');
+  }
+
+  function showList() {
+    jadwalLoadingState.classList.add('hidden');
+    jadwalListEl.classList.remove('hidden');
+    jadwalListEl.classList.add('flex');
+    jadwalEmptyState.classList.add('hidden');
+  }
+
+  function showEmpty() {
+    jadwalLoadingState.classList.add('hidden');
+    jadwalListEl.classList.add('hidden');
+    jadwalListEl.classList.remove('flex');
+    jadwalEmptyState.classList.remove('hidden');
+  }
+
+  function resetForm() {
     jadwalForm.reset();
     jadwalId.value = '';
     jadwalFormTitle.textContent = 'Tambah Jadwal';
     jStatus.textContent = '';
-    jStatus.style.color = '';
+    jStatus.className = 'font-medium text-sm rounded-lg transition mb-4';
+  }
+
+  function setStatus(msg, type) {
+    jStatus.textContent = msg;
+    jStatus.className = 'font-medium text-sm rounded-lg transition mb-4';
+    if (type === 'error') jStatus.classList.add('text-red-700', 'bg-red-50', 'px-3', 'py-2.5');
+    else if (type === 'success') jStatus.classList.add('text-emerald-800', 'bg-emerald-100', 'px-3', 'py-2.5');
+    else if (type === 'loading') jStatus.classList.add('text-purple-800', 'bg-purple-100', 'px-3', 'py-2.5');
+  }
+
+  function formatTanggal(dateStr) {
+    try {
+      return new Date(dateStr).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  }
+
+  function formatHari(dateStr) {
+    try {
+      return new Date(dateStr).toLocaleDateString('id-ID', {
+        weekday: 'long',
+      });
+    } catch {
+      return '';
+    }
+  }
+
+  // --- Load Data ---
+  async function loadJadwal() {
+    showLoading();
+    hideError();
+    try {
+      const { data, error } = await supabase
+        .from('jadwal_kompetisi')
+        .select('*')
+        .order('tanggal', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        showEmpty();
+        return;
+      }
+
+      renderList(data);
+      showList();
+    } catch (err) {
+      console.error('Gagal fetch jadwal:', err);
+      showError(err.message);
+    }
+  }
+
+  function renderList(items) {
+    jadwalListEl.innerHTML = items.map((item) => `
+      <div class="flex items-start flex-wrap sm:flex-nowrap gap-3.5 px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/60 hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition" data-id="${item.id}">
+        <div class="flex-1 min-w-[150px]">
+          <div class="flex items-center flex-wrap gap-2 mb-1">
+            <span class="font-bold text-[0.98rem] text-slate-900">${formatTanggal(item.tanggal)}</span>
+            <span class="bg-purple-50 text-purple-600 text-[0.7rem] font-bold px-2.5 py-0.5 rounded-full tracking-wide">📌 ${formatHari(item.tanggal)}</span>
+          </div>
+          <strong class="text-[0.98rem] text-slate-900 block mb-0.5">${item.judul}</strong>
+          ${item.deskripsi ? `<p class="text-slate-500 text-[0.87rem] mt-0.5 leading-snug">${item.deskripsi}</p>` : ''}
+        </div>
+        <div class="flex gap-1.5 flex-shrink-0 w-full justify-end sm:w-auto mt-2 sm:mt-0">
+          <button type="button" class="btn-edit-jadwal text-purple-600 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1"
+            data-id="${item.id}" data-tanggal="${item.tanggal}" data-judul="${item.judul}" data-deskripsi="${item.deskripsi || ''}">
+             <span>Edit</span>
+          </button>
+          <button type="button" class="btn-delete-jadwal text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1" data-id="${item.id}">
+             <span>Hapus</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    attachRowEvents();
+  }
+
+  function attachRowEvents() {
+    // Edit
+    jadwalListEl.querySelectorAll('.btn-edit-jadwal').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        jadwalId.value = btn.dataset.id;
+        document.getElementById('jTanggal').value = btn.dataset.tanggal;
+        document.getElementById('jJudul').value = btn.dataset.judul;
+        document.getElementById('jDeskripsi').value = btn.dataset.deskripsi || '';
+        jadwalFormTitle.textContent = 'Edit Jadwal';
+        openForm();
+        document.getElementById('jTanggal').focus();
+        setStatus('', '');
+      });
+    });
+
+    // Delete
+    jadwalListEl.querySelectorAll('.btn-delete-jadwal').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Yakin ingin menghapus jadwal ini?')) return;
+        const id = btn.dataset.id;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '⏳ <span>Menghapus...</span>';
+        btn.disabled = true;
+
+        try {
+          const { error } = await supabase.from('jadwal_kompetisi').delete().eq('id', id);
+          if (error) throw error;
+          await loadJadwal();
+        } catch (err) {
+          alert('Gagal menghapus: ' + err.message);
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // --- Form Toggle ---
+  function openForm() {
+    jadwalForm.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      jadwalForm.classList.remove('max-h-0', 'opacity-0', '-translate-y-1.5');
+      jadwalForm.classList.add('max-h-[900px]', 'opacity-100', 'translate-y-0');
+    });
+    jadwalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function closeForm() {
+    jadwalForm.classList.remove('max-h-[900px]', 'opacity-100', 'translate-y-0');
+    jadwalForm.classList.add('max-h-0', 'opacity-0', '-translate-y-1.5');
+    setTimeout(() => {
+      jadwalForm.classList.add('hidden');
+      resetForm();
+    }, 200);
   }
 
   btnTambahJadwal.addEventListener('click', () => {
-    resetJadwalForm();
-    jadwalForm.classList.remove('hidden');
-    jadwalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    resetForm();
+    openForm();
     document.getElementById('jTanggal').focus();
   });
 
-  btnBatalJadwal.addEventListener('click', () => {
-    jadwalForm.classList.add('hidden');
-    resetJadwalForm();
-  });
+  btnBatalJadwal.addEventListener('click', closeForm);
 
-  // Edit buttons
-  document.querySelectorAll('.btn-edit').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      jadwalId.value = btn.dataset.id;
-      document.getElementById('jTanggal').value = btn.dataset.tanggal;
-      document.getElementById('jJudul').value = btn.dataset.judul;
-      document.getElementById('jDeskripsi').value = btn.dataset.deskripsi;
-      jadwalFormTitle.textContent = 'Edit Jadwal';
-      jadwalForm.classList.remove('hidden');
-      jadwalForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  });
-
-  // Delete buttons
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Yakin ingin menghapus jadwal ini?')) return;
-
-      const { error } = await supabase
-        .from('jadwal_kompetisi')
-        .delete()
-        .eq('id', btn.dataset.id);
-
-      if (error) {
-        alert('Gagal menghapus: ' + error.message);
-      } else {
-        window.location.reload();
-      }
-    });
-  });
-
-  // Form submit
+  // --- Submit ---
   jadwalForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -167,371 +286,38 @@ const { data: jadwalList } = await supabase
     const deskripsi = document.getElementById('jDeskripsi').value.trim();
 
     if (!tanggal) {
-      jStatus.textContent = '⚠️ Tanggal wajib diisi.';
-      jStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Tanggal wajib diisi.', 'error');
       return;
     }
 
     if (!judul) {
-      jStatus.textContent = '⚠️ Judul kegiatan wajib diisi.';
-      jStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Judul kegiatan wajib diisi.', 'error');
       return;
     }
 
-    jSubmitBtn.disabled = true;
-    jStatus.textContent = '⏳ Menyimpan...';
-    jStatus.style.color = '#2563eb';
-
+    setStatus('⏳ Menyimpan...', 'loading');
     const payload = { tanggal, judul, deskripsi: deskripsi || null };
-    let error;
 
-    if (jadwalId.value) {
-      ({ error } = await supabase.from('jadwal_kompetisi').update(payload).eq('id', jadwalId.value));
-    } else {
-      ({ error } = await supabase.from('jadwal_kompetisi').insert(payload));
+    try {
+      let error;
+      if (jadwalId.value) {
+        ({ error } = await supabase.from('jadwal_kompetisi').update(payload).eq('id', jadwalId.value));
+      } else {
+        ({ error } = await supabase.from('jadwal_kompetisi').insert(payload));
+      }
+      if (error) throw error;
+
+      setStatus('✅ Jadwal berhasil ' + (jadwalId.value ? 'diperbarui' : 'ditambahkan') + '!', 'success');
+      setTimeout(async () => {
+        closeForm();
+        resetForm();
+        await loadJadwal();
+      }, 800);
+    } catch (err) {
+      setStatus('❌ Gagal: ' + err.message, 'error');
     }
-
-    if (error) {
-      jStatus.textContent = '❌ Gagal: ' + error.message;
-      jStatus.style.color = '#dc2626';
-    } else {
-      jStatus.textContent = '✅ Jadwal berhasil ' + (jadwalId.value ? 'diperbarui' : 'ditambahkan') + '!';
-      jStatus.style.color = '#16a34a';
-      setTimeout(() => window.location.reload(), 1000);
-    }
-
-    jSubmitBtn.disabled = false;
   });
+
+  // --- Init ---
+  loadJadwal();
 </script>
-
-<style>
-  /* ----- CARD UTAMA ----- */
-  .form-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-card h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 0.2rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  /* ----- TOMBOL ----- */
-  .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    white-space: nowrap;
-  }
-  .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-add .plus-icon {
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-
-  .btn-outline {
-    background: transparent;
-    border: 1px solid #d1d9e6;
-    color: #475569;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .btn-outline:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-  }
-
-  /* ----- JADWAL LIST ----- */
-  .jadwal-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin: 1.25rem 0 1.5rem 0;
-  }
-
-  .jadwal-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    padding: 0.9rem 1rem;
-    background: #fafcff;
-    border-radius: 10px;
-    border: 1px solid #eef2f6;
-    transition: border-color 0.2s, background 0.2s;
-    gap: 0.75rem;
-  }
-  .jadwal-item:hover {
-    background: #f8fafc;
-    border-color: #d9e2ef;
-  }
-
-  .jadwal-item__content {
-    flex: 1;
-    min-width: 150px;
-  }
-
-  .jadwal-item__header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-bottom: 0.3rem;
-  }
-
-  .jadwal-item__date {
-    font-weight: 700;
-    font-size: 1rem;
-    color: #0f172a;
-  }
-
-  .badge-tanggal {
-    background: #eef2ff;
-    color: #2563eb;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.7rem;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
-  }
-
-  .jadwal-item__judul {
-    font-size: 1rem;
-    color: #0f172a;
-    display: block;
-    margin-bottom: 0.1rem;
-  }
-
-  .jadwal-item__desc {
-    font-size: 0.9rem;
-    color: #475569;
-    margin: 0.1rem 0 0 0;
-    line-height: 1.4;
-  }
-
-  .jadwal-item__actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-
-  .btn-edit,
-  .btn-delete {
-    border: none;
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-    background: transparent;
-  }
-
-  .btn-edit {
-    color: #2563eb;
-    background: #eff6ff;
-  }
-  .btn-edit:hover {
-    background: #dbeafe;
-  }
-
-  .btn-delete {
-    color: #dc2626;
-    background: #fef2f2;
-  }
-  .btn-delete:hover {
-    background: #fee2e2;
-  }
-
-  /* ----- EMPTY STATE ----- */
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    background: #fafcff;
-    border-radius: 12px;
-    border: 1px dashed #d9e2ef;
-  }
-  .empty-icon {
-    font-size: 2.4rem;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-  .empty-state p {
-    font-weight: 600;
-    color: #334155;
-    margin: 0;
-  }
-  .empty-sub {
-    font-size: 0.9rem;
-    color: #94a3b8;
-  }
-
-  /* ----- FORM TOGGLE ----- */
-  .jadwal-form {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    animation: slideDown 0.3s ease forwards;
-  }
-  .jadwal-form.hidden {
-    display: none;
-  }
-
-  @keyframes slideDown {
-    0% {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .form-divider {
-    border: 0;
-    border-top: 2px solid #e9edf4;
-    margin: 0.5rem 0 1.25rem 0;
-  }
-
-  .jadwal-form h3 {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0 0 1.25rem 0;
-  }
-
-  .form-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1e293b;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.65rem 0.75rem;
-    border: 1px solid #d1d9e6;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fff;
-    font-family: inherit;
-    width: 100%;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 70px;
-  }
-
-  .status-text {
-    font-weight: 500;
-    font-size: 0.95rem;
-    min-height: 1.8rem;
-    margin: 0.5rem 0;
-  }
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  /* ----- RESPONSIF ----- */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1rem;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-add {
-      justify-content: center;
-      width: 100%;
-    }
-    .form-grid-2 {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .jadwal-item {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .jadwal-item__actions {
-      justify-content: flex-end;
-    }
-    .form-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-primary {
-      justify-content: center;
-    }
-    .badge-tanggal {
-      font-size: 0.65rem;
-    }
-  }
-</style>

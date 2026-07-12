@@ -1,59 +1,123 @@
 ---
-import { supabase } from '../lib/supabase';
-
-const { data: footer } = await supabase.from('footer_content').select('*').single();
-const { data: socialLinks } = await supabase.from('footer_social_links').select('*').order('urutan', { ascending: true });
-const { data: quickLinks } = await supabase.from('navbar_menus').select('label, href').order('urutan', { ascending: true });
-
-const year = new Date().getFullYear();
+// =============================================================
+// components/Footer.astro
+// Footer client‑side: data diambil dari Supabase di browser.
+// =============================================================
 ---
 
 <footer class="footer">
   <div class="container footer__inner">
+    <!-- Brand -->
     <div class="footer__brand">
       <a href="/" class="footer__logo-link">
-        <img src={footer?.logo_url || '/images/logo.png'} alt="Logo KKA" class="footer__logo" />
+        <img src="/images/logo.png" alt="Logo KKA" class="footer__logo" id="footerLogo" />
         <span>Kompetisi Kompetensi Akademik</span>
       </a>
-      <p class="footer__tagline">{footer?.tagline}</p>
+      <p class="footer__tagline" id="footerTagline">Memuat...</p>
     </div>
 
+    <!-- Quick Links (diisi ulang oleh JS) -->
     <div class="footer__col">
       <h4>Quick Links</h4>
-      <ul>
-        {(quickLinks ?? []).map((link) => (
-          <li><a href={link.href}>{link.label}</a></li>
-        ))}
+      <ul id="footerQuickLinks">
+        <li><a href="/">Beranda</a></li>
+        <li><a href="/informasi">Informasi</a></li>
+        <li><a href="/tentang">Tentang</a></li>
       </ul>
     </div>
 
+    <!-- Kontak -->
     <div class="footer__col">
       <h4>Kontak</h4>
       <ul class="footer__contact">
-        <li>{footer?.alamat}</li>
-        <li>{footer?.email}</li>
-        <li>{footer?.telepon}</li>
+        <li id="footerAlamat">Memuat...</li>
+        <li id="footerEmail">Memuat...</li>
+        <li id="footerTelepon">Memuat...</li>
       </ul>
     </div>
 
+    <!-- Sosial Media -->
     <div class="footer__col">
       <h4>Ikuti Kami</h4>
-      <div class="footer__social">
-        {(socialLinks ?? []).map((social) => (
-          <a href={social.href} aria-label={social.label} class="footer__social-link">
-            <span aria-hidden="true">{social.icon}</span>
-          </a>
-        ))}
+      <div class="footer__social" id="footerSocialIcons">
+        <!-- Diisi oleh JS -->
       </div>
     </div>
   </div>
 
   <div class="footer__bottom">
     <div class="container footer__bottom-inner">
-      <p>&copy; {year} Kompetisi Kompetensi Akademik. Seluruh hak cipta dilindungi.</p>
+      <p>&copy; <span id="footerYear"></span> Kompetisi Kompetensi Akademik. Seluruh hak cipta dilindungi.</p>
     </div>
   </div>
 </footer>
+
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  async function loadFooter() {
+    // --- Footer Content ---
+    try {
+      const { data: footer } = await supabase.from('footer_content').select('*').single();
+      if (footer) {
+        if (footer.logo_url) {
+          document.getElementById('footerLogo').src = footer.logo_url;
+        }
+        document.getElementById('footerTagline').textContent = footer.tagline || '';
+        document.getElementById('footerAlamat').textContent = footer.alamat || '';
+        document.getElementById('footerEmail').textContent = footer.email || '';
+        document.getElementById('footerTelepon').textContent = footer.telepon || '';
+      }
+    } catch (err) {
+      console.warn('Gagal memuat footer content:', err);
+    }
+
+    // --- Quick Links (dari navbar_menus) ---
+    try {
+      const { data: quickLinks } = await supabase
+        .from('navbar_menus')
+        .select('label, href')
+        .order('urutan', { ascending: true });
+
+      const quickLinksContainer = document.getElementById('footerQuickLinks');
+      if (quickLinks && quickLinks.length > 0) {
+        quickLinksContainer.innerHTML = quickLinks.map(link =>
+          `<li><a href="${link.href}">${link.label}</a></li>`
+        ).join('');
+      }
+    } catch (err) {
+      console.warn('Gagal memuat quick links:', err);
+    }
+
+    // --- Sosial Media ---
+    try {
+      const { data: socialLinks } = await supabase
+        .from('footer_social_links')
+        .select('*')
+        .order('urutan', { ascending: true });
+
+      const socialContainer = document.getElementById('footerSocialIcons');
+      if (socialLinks && socialLinks.length > 0) {
+        socialContainer.innerHTML = socialLinks.map(social =>
+          `<a href="${social.href}" aria-label="${social.label}" class="footer__social-link">
+            <span aria-hidden="true">${social.icon || '🌐'}</span>
+          </a>`
+        ).join('');
+      }
+    } catch (err) {
+      console.warn('Gagal memuat social links:', err);
+    }
+
+    // --- Tahun ---
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+  }
+
+  loadFooter();
+</script>
 
 <style>
   .footer {

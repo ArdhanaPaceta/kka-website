@@ -1,105 +1,93 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: artikelList } = await supabase
-  .from('blog_artikel')
-  .select('*')
-  .order('tanggal', { ascending: false });
+// =============================================================
+// components/admin/BlogForm.astro
+// Panel ADMIN untuk kelola Blog (client‑side, Tailwind)
+// =============================================================
 ---
 
-<div class="form-card">
-  <div class="card-header">
+<div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
     <div>
-      <h2>Kelola Blog</h2>
-      <p class="form-hint">Tambah, lihat, atau hapus artikel blog yang tampil di halaman publik.</p>
+      <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola Blog</h2>
+      <p class="text-slate-500 text-sm m-0 leading-snug">Tambah, lihat, atau hapus artikel blog yang tampil di halaman publik.</p>
     </div>
-    <span class="badge-count">{artikelList?.length ?? 0} Artikel</span>
+    <span id="blogCount" class="bg-indigo-50 text-blue-600 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap">0 Artikel</span>
   </div>
 
   <!-- FORM TAMBAH -->
-  <form id="blogForm" class="blog-form">
-    <div class="form-grid">
-      <div class="field">
-        <label for="bJudul">Judul Artikel</label>
-        <input type="text" id="bJudul" placeholder="Contoh: Tips Persiapan Menghadapi KKA" required />
+  <form id="blogForm" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="bJudul" class="font-semibold text-[0.87rem] text-slate-800">Judul Artikel</label>
+        <input type="text" id="bJudul" placeholder="Contoh: Tips Persiapan Menghadapi KKA" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="bTanggal">Tanggal</label>
-        <input type="date" id="bTanggal" required />
+      <div class="flex flex-col gap-1.5">
+        <label for="bTanggal" class="font-semibold text-[0.87rem] text-slate-800">Tanggal</label>
+        <input type="date" id="bTanggal" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
     </div>
 
-    <div class="field">
-      <label for="bRingkasan">Ringkasan (excerpt)</label>
-      <textarea
-        id="bRingkasan"
-        rows="3"
-        placeholder="Strategi belajar efektif agar siswa lebih percaya diri..."
-        required
-      ></textarea>
+    <div class="flex flex-col gap-1.5">
+      <label for="bRingkasan" class="font-semibold text-[0.87rem] text-slate-800">Ringkasan (excerpt)</label>
+      <textarea id="bRingkasan" rows="3" placeholder="Strategi belajar efektif agar siswa lebih percaya diri..." required
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white resize-y min-h-[75px] focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition"></textarea>
     </div>
 
-    <div class="field field-upload">
-      <label for="bImageFile">Gambar Artikel</label>
-      <div class="upload-area" id="uploadArea">
-        <input type="file" id="bImageFile" accept="image/*" required />
-        <div class="upload-placeholder">
-          <span class="upload-icon">🖼️</span>
-          <p>Klik atau seret gambar ke sini</p>
-          <small>Format: JPG, PNG, WEBP (max 5MB)</small>
+    <!-- Upload Gambar -->
+    <div class="flex flex-col gap-1.5">
+      <label class="font-semibold text-[0.87rem] text-slate-800">Gambar Artikel</label>
+      <div id="uploadArea" class="relative border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer transition hover:border-blue-600 hover:bg-blue-50/30 min-h-[150px] flex items-center justify-center">
+        <input type="file" id="bImageFile" accept="image/*" required
+          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+        <div id="uploadPlaceholder" class="pointer-events-none">
+          <span class="text-3xl block mb-1">🖼️</span>
+          <p class="font-medium text-slate-700 m-0">Klik atau seret gambar ke sini</p>
+          <small class="text-slate-400 text-xs">Format: JPG, PNG, WEBP (max 5MB)</small>
         </div>
-        <img id="bPreview" class="preview-img" style="display:none;" alt="Pratinjau gambar" />
+        <img id="bPreview" class="hidden max-w-[200px] max-h-[150px] rounded-lg object-cover border-2 border-blue-600 shadow-lg" alt="Pratinjau gambar" />
       </div>
     </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn-primary" id="bSubmitBtn">
-        <span class="icon-plus">+</span> Tambah Artikel
+    <div class="flex items-center gap-4 flex-wrap pt-2">
+      <button type="submit" id="bSubmitBtn" class="inline-flex items-center gap-2 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed">
+        <span class="text-lg leading-none">+</span> Tambah Artikel
       </button>
-      <span id="bStatus" class="status-text"></span>
+      <span id="bStatus" class="font-medium text-sm min-h-[1.8rem]"></span>
     </div>
   </form>
 
-  <hr class="form-divider" />
+  <hr class="border-0 border-t-2 border-slate-200 my-5" />
 
   <!-- LIST ARTIKEL -->
-  <div class="list-header">
-    <h3>Daftar Artikel</h3>
+  <div class="mb-4">
+    <h3 class="text-[1.1rem] font-bold text-slate-900">Daftar Artikel</h3>
   </div>
 
-  <div id="blogList" class="blog-list">
-    {(artikelList ?? []).length === 0 ? (
-      <div class="empty-state">
-        <span class="empty-icon">📝</span>
-        <p>Belum ada artikel blog.</p>
-        <span class="empty-sub">Tambahkan artikel pertama menggunakan form di atas.</span>
-      </div>
-    ) : (
-      artikelList.map((item) => (
-        <div class="blog-item" data-id={item.id}>
-          <div class="blog-item__image">
-            <img src={item.gambar} alt={item.judul} loading="lazy" />
-          </div>
-          <div class="blog-item__body">
-            <strong>{item.judul}</strong>
-            <span class="blog-date">
-              📅 {new Date(item.tanggal).toLocaleDateString('id-ID', {
-                day: 'numeric', month: 'long', year: 'numeric',
-              })}
-            </span>
-            <p>{item.ringkasan}</p>
-          </div>
-          <button
-            type="button"
-            class="btn-delete"
-            data-id={item.id}
-            data-path={item.path_gambar}
-          >
-            🗑️ Hapus
-          </button>
-        </div>
-      ))
-    )}
+  <!-- Error banner -->
+  <div id="blogErrorBanner" class="hidden items-start gap-2.5 bg-red-50 border border-red-200 px-4 py-3.5 rounded-[10px] mb-6">
+    <span class="text-lg leading-snug">⚠️</span>
+    <div>
+      <p class="m-0 text-red-700 text-sm leading-snug"><strong>Gagal memuat data:</strong> <span id="blogErrorMsg"></span></p>
+      <p class="text-[0.82rem] text-red-800 mt-1">Pastikan tabel "blog_artikel" ada dan RLS mengizinkan SELECT.</p>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="blogLoadingState" class="text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <div class="text-[1.8rem] mb-2">⏳</div>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Memuat artikel...</p>
+  </div>
+
+  <!-- List artikel (diisi via JS) -->
+  <div id="blogList" class="hidden flex-col gap-3 mb-6"></div>
+
+  <!-- Empty state -->
+  <div id="blogEmptyState" class="hidden text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <span class="text-2xl mb-2 block">📝</span>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Belum ada artikel blog.</p>
+    <span class="text-sm text-slate-400">Tambahkan artikel pertama menggunakan form di atas.</span>
   </div>
 </div>
 
@@ -108,42 +96,92 @@ const { data: artikelList } = await supabase
 
   const BUCKET = 'blog';
 
+  // --- DOM Elements ---
   const blogForm = document.getElementById('blogForm');
   const bStatus = document.getElementById('bStatus');
   const bImageFile = document.getElementById('bImageFile');
   const bPreview = document.getElementById('bPreview');
   const bSubmitBtn = document.getElementById('bSubmitBtn');
   const uploadArea = document.getElementById('uploadArea');
+  const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+  const blogCount = document.getElementById('blogCount');
 
-  // Preview gambar saat dipilih
+  const blogListEl = document.getElementById('blogList');
+  const blogEmptyState = document.getElementById('blogEmptyState');
+  const blogLoadingState = document.getElementById('blogLoadingState');
+  const errorBanner = document.getElementById('blogErrorBanner');
+  const errorMsg = document.getElementById('blogErrorMsg');
+
+  // --- State Management ---
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorBanner.classList.remove('hidden');
+    errorBanner.classList.add('flex');
+  }
+
+  function hideError() {
+    errorBanner.classList.add('hidden');
+    errorBanner.classList.remove('flex');
+  }
+
+  function showLoading() {
+    blogLoadingState.classList.remove('hidden');
+    blogListEl.classList.add('hidden');
+    blogListEl.classList.remove('flex');
+    blogEmptyState.classList.add('hidden');
+  }
+
+  function showList() {
+    blogLoadingState.classList.add('hidden');
+    blogListEl.classList.remove('hidden');
+    blogListEl.classList.add('flex');
+    blogEmptyState.classList.add('hidden');
+  }
+
+  function showEmpty() {
+    blogLoadingState.classList.add('hidden');
+    blogListEl.classList.add('hidden');
+    blogListEl.classList.remove('flex');
+    blogEmptyState.classList.remove('hidden');
+  }
+
+  function setStatus(msg, type) {
+    bStatus.textContent = msg;
+    bStatus.className = 'font-medium text-sm min-h-[1.8rem]';
+    if (type === 'error') bStatus.classList.add('text-red-600');
+    else if (type === 'success') bStatus.classList.add('text-emerald-700');
+    else if (type === 'loading') bStatus.classList.add('text-blue-600');
+  }
+
+  // --- Set tanggal default ---
+  document.getElementById('bTanggal').value = new Date().toISOString().split('T')[0];
+
+  // --- Preview gambar ---
   bImageFile.addEventListener('change', () => {
     const file = bImageFile.files?.[0];
     if (file) {
       bPreview.src = URL.createObjectURL(file);
-      bPreview.style.display = 'block';
-      // Sembunyikan placeholder
-      const placeholder = uploadArea.querySelector('.upload-placeholder');
-      if (placeholder) placeholder.style.display = 'none';
+      bPreview.classList.remove('hidden');
+      uploadPlaceholder.classList.add('hidden');
     } else {
-      bPreview.style.display = 'none';
-      const placeholder = uploadArea.querySelector('.upload-placeholder');
-      if (placeholder) placeholder.style.display = 'block';
+      bPreview.classList.add('hidden');
+      uploadPlaceholder.classList.remove('hidden');
     }
   });
 
-  // Drag and drop support
+  // --- Drag and drop ---
   uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('dragover');
+    uploadArea.classList.add('border-blue-600', 'bg-blue-50/50');
   });
 
   uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
+    uploadArea.classList.remove('border-blue-600', 'bg-blue-50/50');
   });
 
   uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('dragover');
+    uploadArea.classList.remove('border-blue-600', 'bg-blue-50/50');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       bImageFile.files = files;
@@ -151,29 +189,100 @@ const { data: artikelList } = await supabase
     }
   });
 
-  // Set tanggal default ke hari ini
-  document.getElementById('bTanggal').value = new Date().toISOString().split('T')[0];
+  // --- Load Artikel ---
+  async function loadArticles() {
+    showLoading();
+    hideError();
+    try {
+      const { data, error } = await supabase
+        .from('blog_artikel')
+        .select('*')
+        .order('tanggal', { ascending: false });
 
+      if (error) throw error;
+
+      blogCount.textContent = `${data?.length || 0} Artikel`;
+
+      if (!data || data.length === 0) {
+        showEmpty();
+        return;
+      }
+
+      renderList(data);
+      showList();
+    } catch (err) {
+      console.error('Gagal fetch artikel:', err);
+      showError(err.message);
+    }
+  }
+
+  function renderList(items) {
+    blogListEl.innerHTML = items.map((item) => `
+      <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/60 hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition items-start flex-wrap sm:flex-nowrap" data-id="${item.id}">
+        <div class="flex-shrink-0 w-[120px] h-[90px] rounded-lg overflow-hidden bg-slate-200 sm:w-[120px] w-full sm:h-[90px] h-[150px]">
+          <img src="${item.gambar}" alt="${item.judul}" class="w-full h-full object-cover" loading="lazy" />
+        </div>
+        <div class="flex-1 flex flex-col gap-1 min-w-[150px]">
+          <strong class="text-[0.98rem] text-slate-900">${item.judul}</strong>
+          <span class="text-slate-500 text-xs">📅 ${new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <p class="text-slate-600 text-[0.87rem] mt-0.5 leading-snug line-clamp-2">${item.ringkasan}</p>
+        </div>
+        <button type="button" class="btn-delete-blog text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1 flex-shrink-0 w-full sm:w-auto justify-center"
+          data-id="${item.id}" data-path="${item.path_gambar || ''}">
+          🗑️ <span>Hapus</span>
+        </button>
+      </div>
+    `).join('');
+
+    attachDeleteEvents();
+  }
+
+  function attachDeleteEvents() {
+    blogListEl.querySelectorAll('.btn-delete-blog').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Hapus artikel ini?')) return;
+
+        const id = btn.dataset.id;
+        const path = btn.dataset.path;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '⏳ <span>Menghapus...</span>';
+        btn.disabled = true;
+
+        try {
+          const { error: dbError } = await supabase.from('blog_artikel').delete().eq('id', id);
+          if (dbError) throw dbError;
+
+          if (path) {
+            await supabase.storage.from(BUCKET).remove([path]);
+          }
+
+          await loadArticles();
+        } catch (err) {
+          alert('Gagal menghapus: ' + err.message);
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // --- Submit Artikel ---
   blogForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const file = bImageFile.files?.[0];
     if (!file) {
-      bStatus.textContent = '⚠️ Silakan pilih gambar terlebih dahulu.';
-      bStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Silakan pilih gambar terlebih dahulu.', 'error');
       return;
     }
 
-    // Validasi ukuran file (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      bStatus.textContent = '⚠️ Ukuran gambar maksimal 5MB.';
-      bStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Ukuran gambar maksimal 5MB.', 'error');
       return;
     }
 
     bSubmitBtn.disabled = true;
-    bStatus.textContent = '⏳ Mengunggah gambar...';
-    bStatus.style.color = '#2563eb';
+    setStatus('⏳ Mengunggah gambar...', 'loading');
 
     try {
       const ext = file.name.split('.').pop();
@@ -183,12 +292,7 @@ const { data: artikelList } = await supabase
         .from(BUCKET)
         .upload(fileName, file);
 
-      if (uploadError) {
-        bStatus.textContent = '❌ Gagal upload: ' + uploadError.message;
-        bStatus.style.color = '#dc2626';
-        bSubmitBtn.disabled = false;
-        return;
-      }
+      if (uploadError) throw new Error('Upload gagal: ' + uploadError.message);
 
       const { data: publicUrlData } = supabase.storage
         .from(BUCKET)
@@ -205,404 +309,28 @@ const { data: artikelList } = await supabase
       const { error: insertError } = await supabase.from('blog_artikel').insert(payload);
 
       if (insertError) {
-        bStatus.textContent = '❌ Gagal menyimpan data: ' + insertError.message;
-        bStatus.style.color = '#dc2626';
+        // Hapus file yang sudah terupload jika insert gagal
         await supabase.storage.from(BUCKET).remove([fileName]);
-        bSubmitBtn.disabled = false;
-        return;
+        throw new Error('Gagal menyimpan: ' + insertError.message);
       }
 
-      bStatus.textContent = '✅ Artikel berhasil ditambahkan!';
-      bStatus.style.color = '#16a34a';
+      setStatus('✅ Artikel berhasil ditambahkan!', 'success');
       blogForm.reset();
-      bPreview.style.display = 'none';
-      const placeholder = uploadArea.querySelector('.upload-placeholder');
-      if (placeholder) placeholder.style.display = 'block';
+      bPreview.classList.add('hidden');
+      uploadPlaceholder.classList.remove('hidden');
       document.getElementById('bTanggal').value = new Date().toISOString().split('T')[0];
       
-      setTimeout(() => window.location.reload(), 800);
+      setTimeout(async () => {
+        setStatus('', '');
+        await loadArticles();
+      }, 1000);
     } catch (err) {
-      bStatus.textContent = '❌ Terjadi kesalahan tak terduga.';
-      bStatus.style.color = '#dc2626';
+      setStatus('❌ ' + err.message, 'error');
     } finally {
       bSubmitBtn.disabled = false;
     }
   });
 
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Hapus artikel ini?')) return;
-
-      const id = btn.dataset.id;
-      const path = btn.dataset.path;
-
-      const { error: dbError } = await supabase.from('blog_artikel').delete().eq('id', id);
-
-      if (dbError) {
-        alert('❌ Gagal menghapus data: ' + dbError.message);
-        return;
-      }
-
-      if (path) {
-        await supabase.storage.from(BUCKET).remove([path]);
-      }
-
-      window.location.reload();
-    });
-  });
+  // --- Init ---
+  loadArticles();
 </script>
-
-<style>
-  /* ----- CARD UTAMA ----- */
-  .form-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-card h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 0.2rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  .badge-count {
-    background: #eef2ff;
-    color: #2563eb;
-    padding: 0.3rem 0.9rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  /* ----- FORM ----- */
-  .blog-form {
-    margin-bottom: 0.5rem;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1e293b;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.65rem 0.75rem;
-    border: 1px solid #d1d9e6;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fff;
-    font-family: inherit;
-    width: 100%;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 70px;
-  }
-
-  /* ----- UPLOAD AREA ----- */
-  .field-upload {
-    margin-bottom: 0.5rem;
-  }
-
-  .upload-area {
-    position: relative;
-    border: 2px dashed #d1d9e6;
-    border-radius: 8px;
-    padding: 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.3s, background 0.3s;
-    background: #fafcff;
-    min-height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .upload-area:hover {
-    border-color: #2563eb;
-    background: #f0f4ff;
-  }
-  .upload-area.dragover {
-    border-color: #2563eb;
-    background: #eef2ff;
-    transform: scale(1.02);
-  }
-
-  .upload-area input[type="file"] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .upload-placeholder {
-    pointer-events: none;
-  }
-  .upload-icon {
-    font-size: 2.5rem;
-    display: block;
-    margin-bottom: 0.3rem;
-  }
-  .upload-placeholder p {
-    font-weight: 500;
-    color: #1e293b;
-    margin: 0;
-  }
-  .upload-placeholder small {
-    color: #94a3b8;
-    font-size: 0.8rem;
-  }
-
-  .preview-img {
-    max-width: 200px;
-    max-height: 150px;
-    border-radius: 8px;
-    object-fit: cover;
-    border: 2px solid #2563eb;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    display: none;
-  }
-
-  /* ----- FORM ACTIONS ----- */
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .icon-plus {
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-
-  .status-text {
-    font-weight: 500;
-    font-size: 0.95rem;
-    min-height: 1.8rem;
-  }
-
-  .form-divider {
-    border: 0;
-    border-top: 2px solid #e9edf4;
-    margin: 1.5rem 0 1.25rem 0;
-  }
-
-  /* ----- LIST HEADER ----- */
-  .list-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0 0 1rem 0;
-  }
-
-  /* ----- LIST ARTIKEL ----- */
-  .blog-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .blog-item {
-    display: flex;
-    gap: 1rem;
-    padding: 0.9rem 1rem;
-    background: #fafcff;
-    border-radius: 10px;
-    border: 1px solid #eef2f6;
-    transition: border-color 0.2s, background 0.2s, transform 0.15s;
-    align-items: flex-start;
-  }
-  .blog-item:hover {
-    background: #f8fafc;
-    border-color: #d9e2ef;
-    transform: translateX(4px);
-  }
-
-  .blog-item__image {
-    flex-shrink: 0;
-    width: 120px;
-    height: 90px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #f1f5f9;
-  }
-  .blog-item__image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .blog-item__body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-  }
-  .blog-item__body strong {
-    font-size: 1rem;
-    color: #0f172a;
-  }
-  .blog-item__body .blog-date {
-    font-size: 0.8rem;
-    color: #64748b;
-  }
-  .blog-item__body p {
-    font-size: 0.9rem;
-    color: #475569;
-    margin: 0.2rem 0 0 0;
-    line-height: 1.4;
-  }
-
-  .btn-delete {
-    border: none;
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-    background: #fef2f2;
-    color: #dc2626;
-    flex-shrink: 0;
-  }
-  .btn-delete:hover {
-    background: #fee2e2;
-  }
-
-  /* ----- EMPTY STATE ----- */
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    background: #fafcff;
-    border-radius: 12px;
-    border: 1px dashed #d9e2ef;
-  }
-  .empty-icon {
-    font-size: 2.4rem;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-  .empty-state p {
-    font-weight: 600;
-    color: #334155;
-    margin: 0;
-  }
-  .empty-sub {
-    font-size: 0.9rem;
-    color: #94a3b8;
-  }
-
-  /* ----- RESPONSIF ----- */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1rem;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .form-grid {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .blog-item {
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-    .blog-item__image {
-      width: 100%;
-      height: 150px;
-    }
-    .btn-delete {
-      width: 100%;
-      text-align: center;
-      padding: 0.6rem;
-    }
-    .form-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-primary {
-      justify-content: center;
-    }
-    .upload-area {
-      min-height: 120px;
-      padding: 1rem;
-    }
-    .preview-img {
-      max-width: 100%;
-      max-height: 180px;
-    }
-  }
-</style>

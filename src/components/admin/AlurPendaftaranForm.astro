@@ -1,89 +1,205 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: langkahList } = await supabase
-  .from('alur_pendaftaran')
-  .select('*')
-  .order('urutan', { ascending: true });
+// =============================================================
+// components/admin/AlurPendaftaranForm.astro
+// Panel ADMIN untuk kelola Alur Pendaftaran (client‑side, Tailwind)
+// =============================================================
 ---
 
-<div class="form-card">
-  <div class="card-header">
+<div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
     <div>
-      <h2>Kelola Alur Pendaftaran</h2>
-      <p class="form-hint">Atur langkah-langkah alur pendaftaran yang tampil di halaman publik.</p>
+      <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola Alur Pendaftaran</h2>
+      <p class="text-slate-500 text-sm m-0 leading-snug">Atur langkah-langkah alur pendaftaran yang tampil di halaman publik.</p>
     </div>
-    <span class="badge-count">{langkahList?.length ?? 0} Langkah</span>
+    <span id="alurCount" class="bg-orange-50 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap">0 Langkah</span>
   </div>
 
   <!-- FORM TAMBAH -->
-  <form id="alurForm" class="alur-form">
-    <div class="form-grid">
-      <div class="field">
-        <label for="aUrutan">Urutan</label>
-        <input type="number" id="aUrutan" placeholder="1" value="1" required />
+  <form id="alurForm" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="aUrutan" class="font-semibold text-[0.87rem] text-slate-800">Urutan</label>
+        <input type="number" id="aUrutan" placeholder="1" value="1" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="aJudul">Judul Langkah</label>
-        <input type="text" id="aJudul" placeholder="Contoh: Pilih Kabupaten" required />
+      <div class="flex flex-col gap-1.5">
+        <label for="aJudul" class="font-semibold text-[0.87rem] text-slate-800">Judul Langkah</label>
+        <input type="text" id="aJudul" placeholder="Contoh: Pilih Kabupaten" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-600/10 transition" />
       </div>
     </div>
 
-    <div class="field">
-      <label for="aDeskripsi">Deskripsi</label>
-      <textarea
-        id="aDeskripsi"
-        rows="3"
-        placeholder="Contoh: Tentukan wilayah kabupaten tempat Anda akan mengikuti kompetisi."
-        required
-      ></textarea>
+    <div class="flex flex-col gap-1.5">
+      <label for="aDeskripsi" class="font-semibold text-[0.87rem] text-slate-800">Deskripsi</label>
+      <textarea id="aDeskripsi" rows="3" placeholder="Contoh: Tentukan wilayah kabupaten tempat Anda akan mengikuti kompetisi." required
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white resize-y min-h-[75px] focus:outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-600/10 transition"></textarea>
     </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn-primary" id="aSubmitBtn">
-        Tambah Langkah
+    <div class="flex items-center gap-4 flex-wrap pt-2">
+      <button type="submit" id="aSubmitBtn" class="inline-flex items-center gap-2 bg-gradient-to-br from-orange-600 to-orange-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(234,88,12,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(234,88,12,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed">
+        <span class="text-lg leading-none">+</span> Tambah Langkah
       </button>
-      <span id="aStatus" class="status-text"></span>
+      <span id="aStatus" class="font-medium text-sm min-h-[1.8rem]"></span>
     </div>
   </form>
 
-  <hr class="form-divider" />
+  <hr class="border-0 border-t-2 border-slate-200 my-5" />
 
   <!-- LIST LANGKAH -->
-  <div class="list-header">
-    <h3>Daftar Langkah</h3>
+  <div class="mb-4">
+    <h3 class="text-[1.1rem] font-bold text-slate-900">Daftar Langkah</h3>
   </div>
 
-  <div id="alurList" class="alur-list">
-    {(langkahList ?? []).length === 0 ? (
-      <div class="empty-state">
-        <p>Belum ada langkah alur pendaftaran.</p>
-        <span class="empty-sub">Tambahkan langkah pertama menggunakan form di atas.</span>
-      </div>
-    ) : (
-      langkahList.map((step) => (
-        <div class="alur-item" data-id={step.id}>
-          <div class="alur-item__number">
-            {String(step.urutan).padStart(2, '0')}
-          </div>
-          <div class="alur-item__body">
-            <strong>{step.judul}</strong>
-            <p>{step.deskripsi}</p>
-          </div>
-          <button type="button" class="btn-delete" data-id={step.id}>Hapus</button>
-        </div>
-      ))
-    )}
+  <!-- Error banner -->
+  <div id="alurErrorBanner" class="hidden items-start gap-2.5 bg-red-50 border border-red-200 px-4 py-3.5 rounded-[10px] mb-6">
+    <span class="text-lg leading-snug">⚠️</span>
+    <div>
+      <p class="m-0 text-red-700 text-sm leading-snug"><strong>Gagal memuat data:</strong> <span id="alurErrorMsg"></span></p>
+      <p class="text-[0.82rem] text-red-800 mt-1">Pastikan tabel "alur_pendaftaran" ada dan RLS mengizinkan SELECT.</p>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="alurLoadingState" class="text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <div class="text-[1.8rem] mb-2">⏳</div>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Memuat data alur...</p>
+  </div>
+
+  <!-- List alur (diisi via JS) -->
+  <div id="alurList" class="hidden flex-col gap-2.5 mb-6"></div>
+
+  <!-- Empty state -->
+  <div id="alurEmptyState" class="hidden text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <span class="text-2xl mb-2 block">🔄</span>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Belum ada langkah alur pendaftaran.</p>
+    <span class="text-sm text-slate-400">Tambahkan langkah pertama menggunakan form di atas.</span>
   </div>
 </div>
 
 <script type="module">
   import { supabase } from '../../lib/supabase';
 
+  // --- DOM Elements ---
   const alurForm = document.getElementById('alurForm');
   const aStatus = document.getElementById('aStatus');
   const aSubmitBtn = document.getElementById('aSubmitBtn');
+  const alurCount = document.getElementById('alurCount');
+  const alurListEl = document.getElementById('alurList');
+  const alurEmptyState = document.getElementById('alurEmptyState');
+  const alurLoadingState = document.getElementById('alurLoadingState');
+  const errorBanner = document.getElementById('alurErrorBanner');
+  const errorMsg = document.getElementById('alurErrorMsg');
 
+  // --- State Management ---
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorBanner.classList.remove('hidden');
+    errorBanner.classList.add('flex');
+  }
+
+  function hideError() {
+    errorBanner.classList.add('hidden');
+    errorBanner.classList.remove('flex');
+  }
+
+  function showLoading() {
+    alurLoadingState.classList.remove('hidden');
+    alurListEl.classList.add('hidden');
+    alurListEl.classList.remove('flex');
+    alurEmptyState.classList.add('hidden');
+  }
+
+  function showList() {
+    alurLoadingState.classList.add('hidden');
+    alurListEl.classList.remove('hidden');
+    alurListEl.classList.add('flex');
+    alurEmptyState.classList.add('hidden');
+  }
+
+  function showEmpty() {
+    alurLoadingState.classList.add('hidden');
+    alurListEl.classList.add('hidden');
+    alurListEl.classList.remove('flex');
+    alurEmptyState.classList.remove('hidden');
+  }
+
+  function setStatus(msg, type) {
+    aStatus.textContent = msg;
+    aStatus.className = 'font-medium text-sm min-h-[1.8rem]';
+    if (type === 'error') aStatus.classList.add('text-red-600');
+    else if (type === 'success') aStatus.classList.add('text-emerald-700');
+    else if (type === 'loading') aStatus.classList.add('text-orange-600');
+  }
+
+  // --- Load Data ---
+  async function loadAlur() {
+    showLoading();
+    hideError();
+    try {
+      const { data, error } = await supabase
+        .from('alur_pendaftaran')
+        .select('*')
+        .order('urutan', { ascending: true });
+
+      if (error) throw error;
+
+      alurCount.textContent = `${data?.length || 0} Langkah`;
+
+      if (!data || data.length === 0) {
+        showEmpty();
+        return;
+      }
+
+      renderList(data);
+      showList();
+    } catch (err) {
+      console.error('Gagal fetch alur:', err);
+      showError(err.message);
+    }
+  }
+
+  function renderList(items) {
+    alurListEl.innerHTML = items.map((item) => `
+      <div class="flex items-center gap-4 px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/60 hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)] hover:translate-x-1 transition" data-id="${item.id}">
+        <div class="flex-shrink-0 w-10 h-10 bg-orange-100 text-orange-600 font-extrabold text-lg rounded-lg flex items-center justify-center">
+          ${String(item.urutan).padStart(2, '0')}
+        </div>
+        <div class="flex-1 min-w-[150px]">
+          <strong class="text-[0.98rem] text-slate-900 block mb-0.5">${item.judul}</strong>
+          <p class="text-slate-500 text-[0.87rem] leading-snug m-0">${item.deskripsi}</p>
+        </div>
+        <button type="button" class="btn-delete-alur text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1 flex-shrink-0" data-id="${item.id}">
+          🗑️ <span>Hapus</span>
+        </button>
+      </div>
+    `).join('');
+
+    attachDeleteEvents();
+  }
+
+  function attachDeleteEvents() {
+    alurListEl.querySelectorAll('.btn-delete-alur').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Hapus langkah alur pendaftaran ini?')) return;
+        const id = btn.dataset.id;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '⏳ <span>Menghapus...</span>';
+        btn.disabled = true;
+
+        try {
+          const { error } = await supabase.from('alur_pendaftaran').delete().eq('id', id);
+          if (error) throw error;
+          await loadAlur();
+        } catch (err) {
+          alert('Gagal menghapus: ' + err.message);
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // --- Submit ---
   alurForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -92,310 +208,34 @@ const { data: langkahList } = await supabase
     const deskripsi = document.getElementById('aDeskripsi').value.trim();
 
     if (!judul || !deskripsi) {
-      aStatus.textContent = 'Judul dan deskripsi wajib diisi.';
-      aStatus.style.color = '#f59e0b';
+      setStatus('⚠️ Judul dan deskripsi wajib diisi.', 'error');
       return;
     }
 
     aSubmitBtn.disabled = true;
-    aStatus.textContent = 'Menyimpan...';
-    aStatus.style.color = '#2563eb';
+    setStatus('⏳ Menyimpan...', 'loading');
 
     const payload = { urutan, judul, deskripsi };
 
-    const { error } = await supabase.from('alur_pendaftaran').insert(payload);
+    try {
+      const { error } = await supabase.from('alur_pendaftaran').insert(payload);
+      if (error) throw error;
 
-    if (error) {
-      aStatus.textContent = 'Gagal: ' + error.message;
-      aStatus.style.color = '#dc2626';
-    } else {
-      aStatus.textContent = 'Langkah berhasil ditambahkan!';
-      aStatus.style.color = '#16a34a';
+      setStatus('✅ Langkah berhasil ditambahkan!', 'success');
       alurForm.reset();
       document.getElementById('aUrutan').value = 1;
-      setTimeout(() => window.location.reload(), 800);
+      
+      setTimeout(async () => {
+        setStatus('', '');
+        await loadAlur();
+      }, 800);
+    } catch (err) {
+      setStatus('❌ Gagal: ' + err.message, 'error');
+    } finally {
+      aSubmitBtn.disabled = false;
     }
-
-    aSubmitBtn.disabled = false;
   });
 
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Hapus langkah alur pendaftaran ini?')) return;
-
-      const { error } = await supabase
-        .from('alur_pendaftaran')
-        .delete()
-        .eq('id', btn.dataset.id);
-
-      if (error) {
-        alert('Gagal menghapus: ' + error.message);
-      } else {
-        window.location.reload();
-      }
-    });
-  });
+  // --- Init ---
+  loadAlur();
 </script>
-
-<style>
-  /* ----- CARD UTAMA ----- */
-  .form-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-card h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 0.2rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  .badge-count {
-    background: #eef2ff;
-    color: #2563eb;
-    padding: 0.3rem 0.9rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  /* ----- FORM ----- */
-  .alur-form {
-    margin-bottom: 0.5rem;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1e293b;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.65rem 0.75rem;
-    border: 1px solid #d1d9e6;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fff;
-    font-family: inherit;
-    width: 100%;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 70px;
-  }
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .status-text {
-    font-weight: 500;
-    font-size: 0.95rem;
-    min-height: 1.8rem;
-  }
-
-  .form-divider {
-    border: 0;
-    border-top: 2px solid #e9edf4;
-    margin: 1.5rem 0 1.25rem 0;
-  }
-
-  /* ----- LIST HEADER ----- */
-  .list-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0 0 1rem 0;
-  }
-
-  /* ----- LIST ITEMS ----- */
-  .alur-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-  }
-
-  .alur-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.9rem 1rem;
-    background: #fafcff;
-    border-radius: 10px;
-    border: 1px solid #eef2f6;
-    transition: border-color 0.2s, background 0.2s, transform 0.15s;
-  }
-  .alur-item:hover {
-    background: #f8fafc;
-    border-color: #d9e2ef;
-    transform: translateX(4px);
-  }
-
-  .alur-item__number {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #2563eb;
-    background: #eff6ff;
-    padding: 0.2rem 0.7rem;
-    border-radius: 8px;
-    flex-shrink: 0;
-    min-width: 40px;
-    text-align: center;
-  }
-
-  .alur-item__body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-  }
-  .alur-item__body strong {
-    font-size: 1rem;
-    color: #0f172a;
-  }
-  .alur-item__body p {
-    font-size: 0.9rem;
-    color: #475569;
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  .btn-delete {
-    border: none;
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-    background: #fef2f2;
-    color: #dc2626;
-    flex-shrink: 0;
-  }
-  .btn-delete:hover {
-    background: #fee2e2;
-  }
-
-  /* ----- EMPTY STATE ----- */
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    background: #fafcff;
-    border-radius: 12px;
-    border: 1px dashed #d9e2ef;
-  }
-  .empty-state p {
-    font-weight: 600;
-    color: #334155;
-    margin: 0 0 0.25rem 0;
-  }
-  .empty-sub {
-    font-size: 0.9rem;
-    color: #94a3b8;
-  }
-
-  /* ----- RESPONSIF ----- */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1rem;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .form-grid {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .alur-item {
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-    .alur-item__number {
-      font-size: 1.1rem;
-      min-width: 32px;
-      padding: 0.1rem 0.5rem;
-    }
-    .btn-delete {
-      width: 100%;
-      text-align: center;
-    }
-    .form-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-primary {
-      justify-content: center;
-    }
-  }
-</style>

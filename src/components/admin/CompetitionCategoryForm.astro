@@ -1,534 +1,305 @@
----
-import { supabase } from '../../lib/supabase';
+  ---
+  // =============================================================
+  // components/admin/CompetitionCategoryForm.astro
+  // Panel ADMIN untuk kelola kategori kompetisi (client‑side, Tailwind)
+  // =============================================================
+  ---
 
-const { data: items } = await supabase
-  .from('competition_categories')
-  .select('*')
-  .order('urutan', { ascending: true });
----
-
-<div class="form-card">
-  <div class="card-header">
-    <div>
-      <h2>Kelola Kategori Kompetisi</h2>
-      <p class="form-hint">Atur kategori jenjang yang tampil di section "Kategori Kompetisi".</p>
+  <div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
+      <div>
+        <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola Kategori Kompetisi</h2>
+        <p class="text-slate-500 text-sm m-0 leading-snug">Atur kategori jenjang yang tampil di section "Kategori Kompetisi".</p>
+      </div>
+      <button type="button" id="btnTambahKategori" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-600 to-blue-700 text-black font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap">
+        <span class="text-lg leading-none">+</span> Tambah Kategori
+      </button>
     </div>
-    <button type="button" id="btnTambahKategori" class="btn-primary btn-add">Tambah Kategori</button>
+
+    <!-- Error banner -->
+    <div id="kategoriErrorBanner" class="hidden items-start gap-2.5 bg-red-50 border border-red-200 px-4 py-3.5 rounded-[10px] mb-6">
+      <span class="text-lg leading-snug">⚠️</span>
+      <div>
+        <p class="m-0 text-red-700 text-sm leading-snug"><strong>Gagal memuat data:</strong> <span id="kategoriErrorMsg"></span></p>
+        <p class="text-[0.82rem] text-red-800 mt-1">Pastikan tabel "competition_categories" ada dan RLS mengizinkan SELECT.</p>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="kategoriLoadingState" class="text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+      <div class="text-[1.8rem] mb-2">⏳</div>
+      <p class="font-semibold text-slate-700 m-0 mb-1">Memuat data kategori...</p>
+    </div>
+
+    <!-- List kategori (diisi via JS) -->
+    <div id="kategoriList" class="hidden flex-col gap-2.5 mb-6"></div>
+
+    <!-- Empty state -->
+    <div id="kategoriEmptyState" class="hidden text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+      <span class="text-2xl mb-2 block">📂</span>
+      <p class="font-semibold text-slate-700 m-0 mb-1">Belum ada kategori kompetisi.</p>
+      <span class="text-sm text-slate-400">Klik tombol "Tambah Kategori" untuk mulai.</span>
+    </div>
+
+    <!-- Form Tambah/Edit Kategori -->
+    <form id="kategoriForm" class="hidden overflow-hidden max-h-0 opacity-0 -translate-y-1.5 transition-all duration-300 ease-in-out">
+      <hr class="border-0 border-t-2 border-slate-200 my-2 mb-5" />
+      <h3 id="kategoriFormTitle" class="text-[1.1rem] font-bold text-slate-900 mb-5">Tambah Kategori</h3>
+      <input type="hidden" id="kategoriId" />
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5 mb-4">
+          <label for="kategoriJenjang" class="font-semibold text-[0.87rem] text-slate-800">Jenjang (Badge)</label>
+          <input type="text" id="kategoriJenjang" name="jenjang" placeholder="SD / SMP / SMK" required
+            class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+          <small class="text-slate-400 text-[0.78rem] mt-0.5">Singkatan jenjang yang akan tampil sebagai badge.</small>
+        </div>
+        <div class="flex flex-col gap-1.5 mb-4">
+          <label for="kategoriUrutan" class="font-semibold text-[0.87rem] text-slate-800">Urutan Tampil</label>
+          <input type="number" id="kategoriUrutan" name="urutan" value="1" required
+            class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="kategoriTitle" class="font-semibold text-[0.87rem] text-slate-800">Judul Kategori</label>
+        <input type="text" id="kategoriTitle" name="title" placeholder="Kategori Sekolah Dasar" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+      </div>
+
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="kategoriDeskripsi" class="font-semibold text-[0.87rem] text-slate-800">Deskripsi</label>
+        <textarea id="kategoriDeskripsi" name="deskripsi" rows="3" placeholder="Deskripsi kategori kompetisi..." required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white resize-y min-h-[75px] focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition"></textarea>
+      </div>
+
+      <p id="kategoriStatus" class="font-medium text-sm rounded-lg transition mb-4"></p>
+
+      <div class="flex gap-3 flex-wrap">
+        <button type="button" id="btnBatalKategori" class="bg-transparent border border-slate-300 text-slate-600 px-5 py-2.5 rounded-xl font-medium hover:bg-slate-100 hover:border-slate-400 transition">Batal</button>
+        <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0">Simpan Data</button>
+      </div>
+    </form>
   </div>
 
-  <div id="kategoriList" class="menu-list">
-    {(items ?? []).length === 0 ? (
-      <div class="empty-state">
-        <span class="empty-icon">📂</span>
-        <p>Belum ada kategori kompetisi.</p>
-        <span class="empty-sub">Klik tombol "Tambah Kategori" untuk mulai.</span>
-      </div>
-    ) : (
-      items.map((item) => (
-        <div class="menu-item" data-id={item.id}>
-          <div class="menu-item__info">
-            <div class="item-header">
-              <span class="badge-jenjang">{item.jenjang}</span>
-              <strong>{item.title}</strong>
-              <span class="badge-urutan">Urutan #{item.urutan}</span>
+  <script type="module">
+    import { supabase } from '../../lib/supabase';
+
+    // --- DOM Elements ---
+    const btnTambahKategori = document.getElementById('btnTambahKategori');
+    const kategoriForm = document.getElementById('kategoriForm');
+    const btnBatalKategori = document.getElementById('btnBatalKategori');
+    const kategoriFormTitle = document.getElementById('kategoriFormTitle');
+    const kategoriId = document.getElementById('kategoriId');
+    const kategoriStatus = document.getElementById('kategoriStatus');
+    const kategoriListEl = document.getElementById('kategoriList');
+    const kategoriEmptyState = document.getElementById('kategoriEmptyState');
+    const kategoriLoadingState = document.getElementById('kategoriLoadingState');
+    const errorBanner = document.getElementById('kategoriErrorBanner');
+    const errorMsg = document.getElementById('kategoriErrorMsg');
+
+    // --- State Management ---
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorBanner.classList.remove('hidden');
+      errorBanner.classList.add('flex');
+    }
+
+    function hideError() {
+      errorBanner.classList.add('hidden');
+      errorBanner.classList.remove('flex');
+    }
+
+    function showLoading() {
+      kategoriLoadingState.classList.remove('hidden');
+      kategoriListEl.classList.add('hidden');
+      kategoriListEl.classList.remove('flex');
+      kategoriEmptyState.classList.add('hidden');
+    }
+
+    function showList() {
+      kategoriLoadingState.classList.add('hidden');
+      kategoriListEl.classList.remove('hidden');
+      kategoriListEl.classList.add('flex');
+      kategoriEmptyState.classList.add('hidden');
+    }
+
+    function showEmpty() {
+      kategoriLoadingState.classList.add('hidden');
+      kategoriListEl.classList.add('hidden');
+      kategoriListEl.classList.remove('flex');
+      kategoriEmptyState.classList.remove('hidden');
+    }
+
+    function resetForm() {
+      kategoriForm.reset();
+      kategoriId.value = '';
+      kategoriFormTitle.textContent = 'Tambah Kategori';
+      document.getElementById('kategoriUrutan').value = 1;
+      kategoriStatus.textContent = '';
+      kategoriStatus.className = 'font-medium text-sm rounded-lg transition mb-4';
+    }
+
+    function setStatus(msg, type) {
+      kategoriStatus.textContent = msg;
+      kategoriStatus.className = 'font-medium text-sm rounded-lg transition mb-4';
+      if (type === 'error') kategoriStatus.classList.add('text-red-700', 'bg-red-50', 'px-3', 'py-2.5');
+      else if (type === 'success') kategoriStatus.classList.add('text-emerald-800', 'bg-emerald-100', 'px-3', 'py-2.5');
+      else if (type === 'loading') kategoriStatus.classList.add('text-blue-800', 'bg-blue-100', 'px-3', 'py-2.5');
+    }
+
+    // --- Load Kategori ---
+    async function loadCategories() {
+      showLoading();
+      hideError();
+      try {
+        const { data, error } = await supabase
+          .from('competition_categories')
+          .select('*')
+          .order('urutan', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          showEmpty();
+          return;
+        }
+
+        renderList(data);
+        showList();
+      } catch (err) {
+        console.error('Gagal fetch kategori:', err);
+        showError(err.message);
+      }
+    }
+
+    function renderList(items) {
+      kategoriListEl.innerHTML = items.map((item) => `
+        <div class="flex items-center flex-wrap sm:flex-nowrap gap-3.5 px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/60 hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition" data-id="${item.id}">
+          <div class="flex-1 min-w-[150px]">
+            <div class="flex items-center flex-wrap gap-2 mb-1">
+              <span class="bg-blue-100 text-blue-700 font-bold text-[0.7rem] px-2.5 py-0.5 rounded uppercase tracking-wide">${item.jenjang}</span>
+              <strong class="text-[0.98rem] text-slate-900">${item.title}</strong>
+              <span class="bg-indigo-50 text-blue-600 text-[0.7rem] font-bold px-2.5 py-0.5 rounded-full tracking-wide">Urutan #${item.urutan}</span>
             </div>
-            <p class="item-desc">{item.deskripsi}</p>
+            <p class="text-slate-500 text-[0.87rem] mt-0.5 leading-snug line-clamp-2">${item.deskripsi}</p>
           </div>
-          <div class="menu-item__actions">
-            <button
-              type="button"
-              class="btn-edit"
-              data-id={item.id}
-              data-jenjang={item.jenjang}
-              data-title={item.title}
-              data-deskripsi={item.deskripsi}
-              data-urutan={item.urutan}
-            >Edit</button>
-            <button type="button" class="btn-delete" data-id={item.id}>Hapus</button>
+          <div class="flex gap-1.5 flex-shrink-0 w-full justify-end sm:w-auto">
+            <button type="button" class="btn-edit-kategori text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1"
+              data-id="${item.id}" data-jenjang="${item.jenjang}" data-title="${item.title}" data-deskripsi="${item.deskripsi}" data-urutan="${item.urutan}">
+              ✏️ <span>Edit</span>
+            </button>
+            <button type="button" class="btn-delete-kategori text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1" data-id="${item.id}">
+              🗑️ <span>Hapus</span>
+            </button>
           </div>
         </div>
-      ))
-    )}
-  </div>
+      `).join('');
 
-  <form id="kategoriForm" class="kategori-form hidden">
-    <hr class="form-divider" />
-    <h3 id="kategoriFormTitle">Tambah Kategori</h3>
-    <input type="hidden" id="kategoriId" />
+      attachRowEvents();
+    }
 
-    <div class="form-grid">
-      <div class="field">
-        <label for="kategoriJenjang">Jenjang (Badge)</label>
-        <input type="text" id="kategoriJenjang" name="jenjang" placeholder="SD / SMP / SMK" required />
-        <small class="field-hint">Singkatan jenjang yang akan tampil sebagai badge.</small>
-      </div>
+    function attachRowEvents() {
+      // Edit
+      kategoriListEl.querySelectorAll('.btn-edit-kategori').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          kategoriId.value = btn.dataset.id;
+          document.getElementById('kategoriJenjang').value = btn.dataset.jenjang;
+          document.getElementById('kategoriTitle').value = btn.dataset.title;
+          document.getElementById('kategoriDeskripsi').value = btn.dataset.deskripsi;
+          document.getElementById('kategoriUrutan').value = btn.dataset.urutan;
+          kategoriFormTitle.textContent = 'Edit Kategori';
+          openForm();
+          document.getElementById('kategoriJenjang').focus();
+          setStatus('', '');
+        });
+      });
 
-      <div class="field">
-        <label for="kategoriUrutan">Urutan Tampil</label>
-        <input type="number" id="kategoriUrutan" name="urutan" value="1" required />
-      </div>
-    </div>
+      // Delete
+      kategoriListEl.querySelectorAll('.btn-delete-kategori').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Yakin ingin menghapus kategori ini?')) return;
+          const id = btn.dataset.id;
+          const originalHTML = btn.innerHTML;
+          btn.innerHTML = '⏳ <span>Menghapus...</span>';
+          btn.disabled = true;
 
-    <div class="field">
-      <label for="kategoriTitle">Judul Kategori</label>
-      <input type="text" id="kategoriTitle" name="title" placeholder="Kategori Sekolah Dasar" required />
-    </div>
+          try {
+            const { error } = await supabase.from('competition_categories').delete().eq('id', id);
+            if (error) throw error;
+            await loadCategories();
+          } catch (err) {
+            alert('Gagal menghapus: ' + err.message);
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+          }
+        });
+      });
+    }
 
-    <div class="field">
-      <label for="kategoriDeskripsi">Deskripsi</label>
-      <textarea id="kategoriDeskripsi" name="deskripsi" rows="3" placeholder="Deskripsi kategori kompetisi..." required></textarea>
-    </div>
-
-    <p class="status-text" id="kategoriStatus"></p>
-
-    <div class="form-actions">
-      <button type="button" id="btnBatalKategori" class="btn-outline">Batal</button>
-      <button type="submit" class="btn-primary">Simpan Data</button>
-    </div>
-  </form>
-</div>
-
-<script type="module">
-  import { supabase } from '../../lib/supabase';
-
-  const btnTambahKategori = document.getElementById('btnTambahKategori');
-  const kategoriForm = document.getElementById('kategoriForm');
-  const btnBatalKategori = document.getElementById('btnBatalKategori');
-  const kategoriFormTitle = document.getElementById('kategoriFormTitle');
-  const kategoriId = document.getElementById('kategoriId');
-  const kategoriStatus = document.getElementById('kategoriStatus');
-
-  function resetKategoriForm() {
-    kategoriForm.reset();
-    kategoriId.value = '';
-    kategoriFormTitle.textContent = 'Tambah Kategori';
-    document.getElementById('kategoriUrutan').value = 1;
-    kategoriStatus.textContent = '';
-    kategoriStatus.style.color = '';
-  }
-
-  btnTambahKategori.addEventListener('click', () => {
-    resetKategoriForm();
-    kategoriForm.classList.remove('hidden');
-    kategoriForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    document.getElementById('kategoriJenjang').focus();
-  });
-
-  btnBatalKategori.addEventListener('click', () => {
-    kategoriForm.classList.add('hidden');
-    resetKategoriForm();
-  });
-
-  document.querySelectorAll('.btn-edit').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      kategoriId.value = btn.dataset.id;
-      document.getElementById('kategoriJenjang').value = btn.dataset.jenjang;
-      document.getElementById('kategoriTitle').value = btn.dataset.title;
-      document.getElementById('kategoriDeskripsi').value = btn.dataset.deskripsi;
-      document.getElementById('kategoriUrutan').value = btn.dataset.urutan;
-      kategoriFormTitle.textContent = 'Edit Kategori';
+    // --- Form Toggle ---
+    function openForm() {
       kategoriForm.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        kategoriForm.classList.remove('max-h-0', 'opacity-0', '-translate-y-1.5');
+        kategoriForm.classList.add('max-h-[900px]', 'opacity-100', 'translate-y-0');
+      });
       kategoriForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function closeForm() {
+      kategoriForm.classList.remove('max-h-[900px]', 'opacity-100', 'translate-y-0');
+      kategoriForm.classList.add('max-h-0', 'opacity-0', '-translate-y-1.5');
+      setTimeout(() => {
+        kategoriForm.classList.add('hidden');
+        resetForm();
+      }, 200);
+    }
+
+    btnTambahKategori.addEventListener('click', () => {
+      resetForm();
+      openForm();
+      document.getElementById('kategoriJenjang').focus();
     });
-  });
 
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Yakin ingin menghapus kategori ini?')) return;
+    btnBatalKategori.addEventListener('click', closeForm);
 
-      const { error } = await supabase
-        .from('competition_categories')
-        .delete()
-        .eq('id', btn.dataset.id);
+    // --- Submit ---
+    kategoriForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const jenjang = document.getElementById('kategoriJenjang').value.trim();
+      const title = document.getElementById('kategoriTitle').value.trim();
+      const deskripsi = document.getElementById('kategoriDeskripsi').value.trim();
+      const urutan = parseInt(document.getElementById('kategoriUrutan').value, 10);
 
-      if (error) {
-        alert('Gagal menghapus: ' + error.message);
-      } else {
-        window.location.reload();
+      if (!jenjang || !title || !deskripsi) {
+        setStatus('⚠️ Semua field wajib diisi.', 'error');
+        return;
+      }
+
+      setStatus('⏳ Menyimpan...', 'loading');
+      const payload = { jenjang, title, deskripsi, urutan };
+
+      try {
+        let error;
+        if (kategoriId.value) {
+          ({ error } = await supabase.from('competition_categories').update(payload).eq('id', kategoriId.value));
+        } else {
+          ({ error } = await supabase.from('competition_categories').insert(payload));
+        }
+        if (error) throw error;
+
+        setStatus('✅ Tersimpan!', 'success');
+        setTimeout(async () => {
+          closeForm();
+          resetForm();
+          await loadCategories();
+        }, 800);
+      } catch (err) {
+        setStatus('❌ Gagal menyimpan: ' + err.message, 'error');
       }
     });
-  });
 
-  kategoriForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    kategoriStatus.textContent = '⏳ Menyimpan...';
-    kategoriStatus.style.color = '#2563eb';
-
-    const payload = {
-      jenjang: document.getElementById('kategoriJenjang').value.trim(),
-      title: document.getElementById('kategoriTitle').value.trim(),
-      deskripsi: document.getElementById('kategoriDeskripsi').value.trim(),
-      urutan: parseInt(document.getElementById('kategoriUrutan').value, 10),
-    };
-
-    if (!payload.jenjang || !payload.title || !payload.deskripsi) {
-      kategoriStatus.textContent = '⚠️ Semua field wajib diisi.';
-      kategoriStatus.style.color = '#f59e0b';
-      return;
-    }
-
-    let error;
-
-    if (kategoriId.value) {
-      ({ error } = await supabase.from('competition_categories').update(payload).eq('id', kategoriId.value));
-    } else {
-      ({ error } = await supabase.from('competition_categories').insert(payload));
-    }
-
-    if (error) {
-      kategoriStatus.textContent = '❌ Gagal menyimpan: ' + error.message;
-      kategoriStatus.style.color = '#dc2626';
-    } else {
-      kategoriStatus.textContent = '✅ Tersimpan! Halaman akan dimuat ulang...';
-      kategoriStatus.style.color = '#16a34a';
-      setTimeout(() => window.location.reload(), 1000);
-    }
-  });
-</script>
-
-<style>
-  /* ----- CARD UTAMA ----- */
-  .form-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-card h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 0.2rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  /* ----- TOMBOL ----- */
-  .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    white-space: nowrap;
-  }
-  .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-outline {
-    background: transparent;
-    border: 1px solid #d1d9e6;
-    color: #475569;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .btn-outline:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-  }
-
-  .btn-add {
-    background: #2563eb;
-  }
-  .btn-add:hover {
-    background: #1d4ed8;
-  }
-
-  /* ----- LIST ITEMS ----- */
-  .menu-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin: 1.25rem 0 1.5rem 0;
-  }
-
-  .menu-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    padding: 0.9rem 1rem;
-    background: #fafcff;
-    border-radius: 10px;
-    border: 1px solid #eef2f6;
-    transition: border-color 0.2s, background 0.2s, transform 0.15s;
-    gap: 0.75rem;
-  }
-  .menu-item:hover {
-    background: #f8fafc;
-    border-color: #d9e2ef;
-    transform: translateX(4px);
-  }
-
-  .menu-item__info {
-    flex: 1;
-    min-width: 150px;
-  }
-
-  .item-header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-bottom: 0.2rem;
-  }
-
-  .badge-jenjang {
-    background: #dbeafe;
-    color: #1d4ed8;
-    font-weight: 700;
-    font-size: 0.7rem;
-    padding: 0.15rem 0.7rem;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .item-header strong {
-    font-size: 1rem;
-    color: #0f172a;
-  }
-
-  .badge-urutan {
-    background: #eef2ff;
-    color: #2563eb;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.7rem;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
-  }
-
-  .item-desc {
-    color: #475569;
-    font-size: 0.9rem;
-    margin: 0.15rem 0 0 0;
-    line-height: 1.4;
-  }
-
-  .menu-item__actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .btn-edit,
-  .btn-delete {
-    border: none;
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-    background: transparent;
-  }
-
-  .btn-edit {
-    color: #2563eb;
-    background: #eff6ff;
-  }
-  .btn-edit:hover {
-    background: #dbeafe;
-  }
-
-  .btn-delete {
-    color: #dc2626;
-    background: #fef2f2;
-  }
-  .btn-delete:hover {
-    background: #fee2e2;
-  }
-
-  /* ----- EMPTY STATE ----- */
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    background: #fafcff;
-    border-radius: 12px;
-    border: 1px dashed #d9e2ef;
-  }
-  .empty-icon {
-    font-size: 2.4rem;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-  .empty-state p {
-    font-weight: 600;
-    color: #334155;
-    margin: 0;
-  }
-  .empty-sub {
-    font-size: 0.9rem;
-    color: #94a3b8;
-  }
-
-  /* ----- FORM (Toggle) ----- */
-  .kategori-form {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    animation: slideDown 0.3s ease forwards;
-  }
-  .kategori-form.hidden {
-    display: none;
-  }
-
-  @keyframes slideDown {
-    0% {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .form-divider {
-    border: 0;
-    border-top: 2px solid #e9edf4;
-    margin: 0.5rem 0 1.25rem 0;
-  }
-
-  .kategori-form h3 {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0 0 1.25rem 0;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1e293b;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.65rem 0.75rem;
-    border: 1px solid #d1d9e6;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fff;
-    font-family: inherit;
-    width: 100%;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 70px;
-  }
-
-  .field-hint {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    margin-top: 0.2rem;
-  }
-
-  /* ----- STATUS TEXT ----- */
-  .status-text {
-    margin: 0.75rem 0 0.5rem 0;
-    font-weight: 500;
-    min-height: 1.8rem;
-  }
-
-  /* ----- FORM ACTIONS ----- */
-  .form-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  /* ----- RESPONSIF ----- */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1rem;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-add {
-      justify-content: center;
-      width: 100%;
-    }
-    .form-grid {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .menu-item {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .menu-item__actions {
-      justify-content: flex-end;
-    }
-    .item-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.3rem;
-    }
-    .form-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-primary,
-    .btn-outline {
-      justify-content: center;
-      width: 100%;
-    }
-  }
-</style>
+    // --- Init ---
+    loadCategories();
+  </script>

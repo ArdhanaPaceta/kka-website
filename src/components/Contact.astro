@@ -1,7 +1,9 @@
 ---
-import { supabase } from '../lib/supabase';
-
-const { data: contact } = await supabase.from('contact_info').select('*').single();
+// =============================================================
+// components/Contact.astro
+// Section "Kontak" — info kontak di-fetch CLIENT-SIDE supaya
+// selalu update tanpa perlu rebuild.
+// =============================================================
 ---
 
 <section class="contact section" id="kontak">
@@ -32,43 +34,52 @@ const { data: contact } = await supabase.from('contact_info').select('*').single
           <textarea id="pesan" name="pesan" rows="5" placeholder="Tulis pesan Anda di sini..." required></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary contact__submit">Kirim Pesan</button>
+        <button type="submit" class="btn btn-primary contact__submit" id="contactSubmitBtn">
+          <span class="contact__submit-text">Kirim Pesan</span>
+          <span class="contact__submit-loading" style="display:none;">Mengirim...</span>
+        </button>
 
         <p class="contact__status" id="contactStatus" role="status"></p>
       </form>
 
       <div class="contact__info reveal reveal-delay-2">
-        <div class="contact__info-item">
-          <span class="contact__info-icon">📍</span>
-          <div>
-            <h4>Alamat</h4>
-            <p>{contact?.alamat}</p>
-          </div>
-        </div>
+        <div id="contactInfoLoading" class="contact__info-loading">Memuat info kontak...</div>
 
-        <div class="contact__info-item">
-          <span class="contact__info-icon">✉️</span>
-          <div>
-            <h4>Email</h4>
-            <p>{contact?.email}</p>
+        <!-- Diisi via JS setelah fetch selesai -->
+        <div id="contactInfoItems" style="display:none;">
+          <div class="contact__info-item">
+            <span class="contact__info-icon">📍</span>
+            <div>
+              <h4>Alamat</h4>
+              <p id="infoAlamat">-</p>
+            </div>
           </div>
-        </div>
 
-        <div class="contact__info-item">
-          <span class="contact__info-icon">💬</span>
-          <div>
-            <h4>WhatsApp</h4>
-            <p>{contact?.whatsapp}</p>
+          <div class="contact__info-item">
+            <span class="contact__info-icon">✉️</span>
+            <div>
+              <h4>Email</h4>
+              <p id="infoEmail">-</p>
+            </div>
           </div>
-        </div>
 
-        <div class="contact__map">
-          <iframe
-            title="Lokasi Kompetisi Kompetensi Akademik"
-            src={contact?.map_embed_url}
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
+          <div class="contact__info-item">
+            <span class="contact__info-icon">💬</span>
+            <div>
+              <h4>WhatsApp</h4>
+              <p id="infoWhatsapp">-</p>
+            </div>
+          </div>
+
+          <div class="contact__map">
+            <iframe
+              id="infoMapFrame"
+              title="Lokasi Kompetisi Kompetensi Akademik"
+              src=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
         </div>
       </div>
     </div>
@@ -78,28 +89,75 @@ const { data: contact } = await supabase.from('contact_info').select('*').single
 <script type="module">
   import { supabase } from '../lib/supabase';
 
+  // =============================================================
+  // 1. Muat info kontak (alamat, email, whatsapp, peta) — client-side
+  // =============================================================
+  const infoLoadingEl = document.getElementById('contactInfoLoading');
+  const infoItemsEl = document.getElementById('contactInfoItems');
+
+  async function loadContactInfo() {
+    try {
+      const { data: contact, error } = await supabase.from('contact_info').select('*').single();
+      if (error) throw error;
+
+      document.getElementById('infoAlamat').textContent = contact?.alamat ?? '-';
+      document.getElementById('infoEmail').textContent = contact?.email ?? '-';
+      document.getElementById('infoWhatsapp').textContent = contact?.whatsapp ?? '-';
+      document.getElementById('infoMapFrame').src = contact?.map_embed_url ?? '';
+
+      infoLoadingEl.style.display = 'none';
+      infoItemsEl.style.display = 'block';
+    } catch (err) {
+      infoLoadingEl.textContent = 'Gagal memuat info kontak.';
+      console.error('Gagal memuat info kontak:', err.message || err);
+    }
+  }
+
+  loadContactInfo();
+
+  // =============================================================
+  // 2. Submit form pesan ke Supabase
+  //    (Hanya SATU listener submit — sebelumnya ada 2 script yang
+  //    sama-sama attach listener, menyebabkan submit ganda)
+  // =============================================================
   const form = document.getElementById('contactForm');
   const status = document.getElementById('contactStatus');
+  const submitBtn = document.getElementById('contactSubmitBtn');
+  const submitText = submitBtn.querySelector('.contact__submit-text');
+  const submitLoading = submitBtn.querySelector('.contact__submit-loading');
 
-  form?.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    status.textContent = 'Mengirim...';
 
-    const payload = {
-      nama: document.getElementById('nama').value,
-      email: document.getElementById('email').value,
-      pesan: document.getElementById('pesan').value,
-    };
+    const nama = document.getElementById('nama').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const pesan = document.getElementById('pesan').value.trim();
 
-    const { error } = await supabase.from('contact_messages').insert(payload);
-
-    if (error) {
-      status.textContent = 'Gagal mengirim pesan: ' + error.message;
+    if (!nama || !email || !pesan) {
+      status.textContent = 'Mohon lengkapi seluruh kolom terlebih dahulu.';
       status.style.color = '#dc2626';
-    } else {
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'inline';
+    status.textContent = '';
+
+    try {
+      const { error } = await supabase.from('contact_messages').insert({ nama, email, pesan });
+      if (error) throw error;
+
       status.textContent = 'Pesan berhasil dikirim, terima kasih!';
       status.style.color = '#16a34a';
       form.reset();
+    } catch (err) {
+      status.textContent = 'Gagal mengirim pesan: ' + err.message;
+      status.style.color = '#dc2626';
+    } finally {
+      submitBtn.disabled = false;
+      submitText.style.display = 'inline';
+      submitLoading.style.display = 'none';
     }
   });
 </script>
@@ -167,6 +225,11 @@ const { data: contact } = await supabase.from('contact_info').select('*').single
     gap: 24px;
   }
 
+  .contact__info-loading {
+    color: var(--color-gray);
+    font-size: 0.9rem;
+  }
+
   .contact__info-item {
     display: flex;
     gap: 16px;
@@ -200,6 +263,7 @@ const { data: contact } = await supabase.from('contact_info').select('*').single
     overflow: hidden;
     border: 1px solid var(--color-border);
     aspect-ratio: 16 / 11;
+    margin-top: 24px;
   }
 
   .contact__map iframe {
@@ -214,43 +278,3 @@ const { data: contact } = await supabase.from('contact_info').select('*').single
     }
   }
 </style>
-
-<script>
-  // ===========================================================
-  // Contact Form — Vanilla JavaScript
-  // Catatan: submit ke Supabase dapat diaktifkan dengan meng-import
-  // helper `kirimPesanKontak` dari src/lib/supabase.ts
-  // ===========================================================
-  const form = document.getElementById('contactForm') as HTMLFormElement | null;
-  const statusEl = document.getElementById('contactStatus');
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(form);
-    const nama = String(formData.get('nama') || '').trim();
-    const email = String(formData.get('email') || '').trim();
-    const pesan = String(formData.get('pesan') || '').trim();
-
-    if (!nama || !email || !pesan) {
-      if (statusEl) statusEl.textContent = 'Mohon lengkapi seluruh kolom terlebih dahulu.';
-      return;
-    }
-
-    if (statusEl) statusEl.textContent = 'Mengirim pesan...';
-
-    try {
-      // Contoh integrasi Supabase (aktifkan setelah lib/supabase.ts dikonfigurasi):
-      //
-      // import { kirimPesanKontak } from '../lib/supabase';
-      // await kirimPesanKontak({ nama, email, pesan });
-
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      if (statusEl) statusEl.textContent = 'Pesan berhasil dikirim. Terima kasih!';
-      form.reset();
-    } catch (err) {
-      if (statusEl) statusEl.textContent = 'Terjadi kesalahan. Silakan coba lagi.';
-    }
-  });
-</script>

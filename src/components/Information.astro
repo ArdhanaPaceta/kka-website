@@ -1,14 +1,8 @@
 ---
 // =============================================================
 // components/Information.astro
-// Section "Informasi" — grid kartu informasi dari Supabase
+// Section "Informasi" – client‑side fetching dari Supabase
 // =============================================================
-import { supabase } from '../lib/supabase';
-
-const { data: infoCards } = await supabase
-  .from('informasi_kartu')
-  .select('*')
-  .order('urutan', { ascending: true });
 ---
 
 <section class="information section" id="informasi">
@@ -22,32 +16,111 @@ const { data: infoCards } = await supabase
       </p>
     </div>
 
-    {(infoCards ?? []).length === 0 ? (
-      <p class="information__empty">Informasi belum tersedia.</p>
-    ) : (
-      <div class="information__grid">
-        {infoCards.map((card, i) => (
-          <div class:list={['information__card', 'card', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
-            <span class="information__icon">{card.icon}</span>
-            <h3 class="information__label">{card.label}</h3>
-            <ul class="information__list">
-              {(card.items ?? []).map((item) => (
-                <li>{item}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    )}
+    <!-- Loading state -->
+    <div id="infoLoading" class="information__empty">
+      <span class="text-2xl block mb-2">⏳</span>
+      Memuat informasi...
+    </div>
 
-    <div class="information__cta reveal">
+    <!-- Empty state -->
+    <div id="infoEmpty" class="information__empty" style="display:none;">
+      <span class="text-2xl block mb-2">📋</span>
+      Informasi belum tersedia.
+    </div>
+
+    <!-- Error state -->
+    <div id="infoError" class="information__empty" style="display:none; color:#dc2626;"></div>
+
+    <!-- Grid, diisi via JS -->
+    <div class="information__grid" id="infoGrid" style="display:none;"></div>
+
+    <!-- CTA -->
+    <div class="information__cta" id="infoCta" style="display:none;">
       <a href="/informasi" class="btn btn-secondary">Lihat Selengkapnya</a>
     </div>
   </div>
 </section>
 
+<script type="module">
+  import { supabase } from '../lib/supabase';
+
+  const loadingEl = document.getElementById('infoLoading');
+  const emptyEl = document.getElementById('infoEmpty');
+  const errorEl = document.getElementById('infoError');
+  const gridEl = document.getElementById('infoGrid');
+  const ctaEl = document.getElementById('infoCta');
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function renderGrid(items) {
+    // CATATAN: class "reveal"/"reveal-delay-X" SENGAJA tidak dipakai di sini.
+    // Elemen ini muncul async setelah fetch selesai, sehingga
+    // IntersectionObserver scroll-animation global (yang hanya observe
+    // elemen yang ada saat DOMContentLoaded) tidak pernah "melihat" elemen
+    // ini -> opacity tetap 0 selamanya walau datanya ada. Menghapus class
+    // ini di sumbernya jauh lebih sederhana & stabil dibanding menambal
+    // dengan fallback ScrollReveal.sync() atau setTimeout manual.
+    gridEl.innerHTML = items.map((card) => `
+      <div class="information__card card">
+        <span class="information__icon">${escapeHtml(card.icon) || '📄'}</span>
+        <h3 class="information__label">${escapeHtml(card.label)}</h3>
+        <ul class="information__list">
+          ${(card.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+        </ul>
+      </div>
+    `).join('');
+
+    ctaEl.style.display = 'block';
+  }
+
+  async function loadInformation() {
+    loadingEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    gridEl.style.display = 'none';
+    ctaEl.style.display = 'none';
+
+    try {
+      const { data, error } = await supabase
+        .from('informasi_kartu')
+        .select('*')
+        .order('urutan', { ascending: true });
+
+      if (error) throw error;
+
+      loadingEl.style.display = 'none';
+
+      if (!data || data.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      gridEl.style.display = 'grid';
+      renderGrid(data);
+    } catch (err) {
+      console.error('Gagal fetch informasi:', err);
+      loadingEl.style.display = 'none';
+      errorEl.textContent = `❌ Gagal memuat informasi: ${err.message || err}`;
+      errorEl.style.display = 'block';
+    }
+  }
+
+  loadInformation();
+</script>
+
 <style>
-  .information__grid {
+  /* PENTING: elemen di dalam #infoGrid dibuat lewat innerHTML, jadi TIDAK
+     mendapat atribut scoping otomatis dari Astro. Semua selector untuk
+     elemen tersebut WAJIB dibungkus :global(...) supaya CSS ini benar-benar
+     berlaku, kalau tidak kartu informasi akan tampil polos tanpa styling. */
+
+  :global(.information__grid) {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
@@ -59,21 +132,21 @@ const { data: infoCards } = await supabase
     padding: 40px 0;
   }
 
-  .information__card {
+  :global(.information__card) {
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
 
-  .information__icon {
+  :global(.information__icon) {
     font-size: 1.8rem;
   }
 
-  .information__label {
+  :global(.information__label) {
     font-size: 1.05rem;
   }
 
-  .information__list {
+  :global(.information__list) {
     padding-left: 18px;
     color: var(--color-gray);
     font-size: 0.9rem;
@@ -88,13 +161,13 @@ const { data: infoCards } = await supabase
   }
 
   @media (max-width: 900px) {
-    .information__grid {
+    :global(.information__grid) {
       grid-template-columns: repeat(2, 1fr);
     }
   }
 
   @media (max-width: 500px) {
-    .information__grid {
+    :global(.information__grid) {
       grid-template-columns: 1fr;
     }
   }

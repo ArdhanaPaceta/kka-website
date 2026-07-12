@@ -1,10 +1,8 @@
 ---
-import { supabase } from '../lib/supabase';
-
-const { data: categories } = await supabase
-  .from('competition_categories')
-  .select('*')
-  .order('urutan', { ascending: true });
+// =============================================================
+// components/Category.astro
+// Section "Kategori Kompetisi" – client‑side fetching
+// =============================================================
 ---
 
 <section class="category section" id="kategori">
@@ -18,34 +16,122 @@ const { data: categories } = await supabase
       </p>
     </div>
 
-    <div class="category__grid">
-      {(categories ?? []).map((cat, i) => (
-        <div class:list={['category__card', 'card', 'reveal', `reveal-delay-${i + 1}`]}>
-          <span class="category__badge">{cat.jenjang}</span>
-          <h3 class="category__title">{cat.title}</h3>
-          <p class="category__desc">{cat.deskripsi}</p>
-          <a href="/regulasi#pendaftaran" class="btn btn-secondary category__btn">Daftar</a>
-        </div>
-      ))}
-    </div>
+    <!-- Loading state -->
+    <p id="categoryLoading" class="category__empty">Memuat data...</p>
+
+    <!-- Empty state -->
+    <p id="categoryEmpty" class="category__empty" style="display:none;">Belum ada data kategori.</p>
+
+    <!-- Error state -->
+    <p id="categoryError" class="category__empty" style="display:none; color:#dc2626;">
+      Gagal memuat data. Periksa kembali konfigurasi.
+    </p>
+
+    <!-- Grid, diisi via JS -->
+    <div class="category__grid" id="categoryGrid" style="display:none;"></div>
   </div>
 </section>
 
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    document.getElementById('categoryLoading').style.display = 'none';
+    const errorEl = document.getElementById('categoryError');
+    errorEl.textContent =
+      'Konfigurasi Supabase tidak ditemukan. Pastikan PUBLIC_SUPABASE_URL dan PUBLIC_SUPABASE_ANON_KEY sudah diset di Vercel.';
+    errorEl.style.display = 'block';
+    throw new Error('Supabase credentials missing');
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  const loadingEl = document.getElementById('categoryLoading');
+  const emptyEl = document.getElementById('categoryEmpty');
+  const errorEl = document.getElementById('categoryError');
+  const gridEl = document.getElementById('categoryGrid');
+
+  function renderGrid(items) {
+    // CATATAN: class "reveal"/"reveal-delay-X" SENGAJA tidak dipakai di sini.
+    // Elemen ini di-render async setelah fetch selesai, sehingga
+    // IntersectionObserver scroll-animation global (yang hanya observe
+    // elemen yang ada saat DOMContentLoaded) tidak pernah "melihat" elemen
+    // ini -> opacity tetap 0 selamanya, kelihatan seperti kosong padahal
+    // datanya ada.
+    gridEl.innerHTML = items.map((item) => `
+      <div class="category__card card">
+        <span class="category__badge">${item.jenjang}</span>
+        <h3 class="category__title">${item.title}</h3>
+        <p class="category__desc">${item.deskripsi}</p>
+        <a href="/regulasi#pendaftaran" class="btn btn-secondary category__btn">Daftar</a>
+      </div>
+    `).join('');
+  }
+
+  async function loadCategories() {
+    loadingEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    gridEl.style.display = 'none';
+
+    try {
+      const { data, error } = await supabase
+        .from('competition_categories')
+        .select('*')
+        .order('urutan', { ascending: true });
+
+      if (error) throw error;
+
+      loadingEl.style.display = 'none';
+
+      if (!data || data.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      gridEl.style.display = 'grid';
+      renderGrid(data);
+    } catch (err) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
+      errorEl.textContent = `Gagal memuat data: ${err.message || err}`;
+      console.error('Gagal fetch kategori:', err);
+    }
+  }
+
+  loadCategories();
+</script>
+
 <style>
-  .category__grid {
+  /* PENTING: elemen di dalam #categoryGrid dibuat lewat innerHTML, jadi
+     TIDAK mendapat atribut scoping otomatis dari Astro. Semua selector
+     untuk elemen tersebut WAJIB dibungkus :global(...) supaya CSS ini
+     benar-benar berlaku, kalau tidak kartu kategori akan tampil polos
+     tanpa styling sama sekali. */
+
+  .category__empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 40px 0;
+  }
+
+  :global(.category__grid) {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 28px;
   }
 
-  .category__card {
+  :global(.category__card) {
     padding: 40px 32px;
     text-align: left;
     position: relative;
     overflow: hidden;
   }
 
-  .category__card::before {
+  :global(.category__card::before) {
     content: '';
     position: absolute;
     top: 0;
@@ -58,11 +144,11 @@ const { data: categories } = await supabase
     transition: transform var(--transition-base);
   }
 
-  .category__card:hover::before {
+  :global(.category__card:hover::before) {
     transform: scaleX(1);
   }
 
-  .category__badge {
+  :global(.category__badge) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -75,23 +161,23 @@ const { data: categories } = await supabase
     margin-bottom: 22px;
   }
 
-  .category__title {
+  :global(.category__title) {
     font-size: 1.25rem;
     margin-bottom: 12px;
   }
 
-  .category__desc {
+  :global(.category__desc) {
     color: var(--color-gray);
     font-size: 0.92rem;
     margin-bottom: 28px;
   }
 
-  .category__btn {
+  :global(.category__btn) {
     width: 100%;
   }
 
   @media (max-width: 900px) {
-    .category__grid {
+    :global(.category__grid) {
       grid-template-columns: 1fr;
     }
   }

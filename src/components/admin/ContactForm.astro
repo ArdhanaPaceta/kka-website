@@ -1,11 +1,6 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: contact } = await supabase.from('contact_info').select('*').single();
-const { data: messages } = await supabase
-  .from('contact_messages')
-  .select('*')
-  .order('created_at', { ascending: false });
+// TIDAK ADA fetch data di frontmatter.
+// Semua fetch dipindah ke client-side script di bawah.
 ---
 
 <div class="form-card">
@@ -14,30 +9,30 @@ const { data: messages } = await supabase
       <h2>Kelola Kontak</h2>
       <p class="form-hint">Atur informasi kontak yang tampil di halaman publik.</p>
     </div>
-    <span class="badge-count">{messages?.length ?? 0} Pesan</span>
+    <span class="badge-count" id="messageCount">0 Pesan</span>
   </div>
 
   <!-- FORM INFO KONTAK -->
   <form id="contactInfoForm" class="contact-form">
     <div class="field">
       <label for="cAlamat">Alamat</label>
-      <input type="text" id="cAlamat" value={contact?.alamat ?? ''} placeholder="Masukkan alamat lengkap" />
+      <input type="text" id="cAlamat" placeholder="Masukkan alamat lengkap" />
     </div>
 
     <div class="form-grid">
       <div class="field">
         <label for="cEmail">Email</label>
-        <input type="email" id="cEmail" value={contact?.email ?? ''} placeholder="contoh@email.com" />
+        <input type="email" id="cEmail" placeholder="contoh@email.com" />
       </div>
       <div class="field">
         <label for="cWhatsapp">WhatsApp</label>
-        <input type="text" id="cWhatsapp" value={contact?.whatsapp ?? ''} placeholder="08xx-xxxx-xxxx" />
+        <input type="text" id="cWhatsapp" placeholder="08xx-xxxx-xxxx" />
       </div>
     </div>
 
     <div class="field">
       <label for="cMap">URL Embed Peta (OpenStreetMap / Google Maps)</label>
-      <input type="text" id="cMap" value={contact?.map_embed_url ?? ''} placeholder="https://www.google.com/maps/embed?..." />
+      <input type="text" id="cMap" placeholder="https://www.google.com/maps/embed?..." />
       <small class="field-hint">Masukkan URL iframe embed peta dari Google Maps atau OpenStreetMap.</small>
     </div>
 
@@ -54,31 +49,14 @@ const { data: messages } = await supabase
     <h3>Pesan Masuk</h3>
   </div>
 
-  <div id="messageList" class="message-list">
-    {(messages ?? []).length === 0 ? (
-      <div class="empty-state">
-        <span class="empty-icon">📭</span>
-        <p>Belum ada pesan masuk.</p>
-        <span class="empty-sub">Pesan dari pengunjung akan muncul di sini.</span>
-      </div>
-    ) : (
-      messages.map((msg) => (
-        <div class="message-item" data-id={msg.id}>
-          <div class="message-item__header">
-            <strong>{msg.nama}</strong>
-            {!msg.is_read && <span class="badge-unread">Baru</span>}
-            <span class="message-date">{new Date(msg.created_at).toLocaleString('id-ID')}</span>
-          </div>
-          <div class="message-item__body">
-            <span class="message-email">{msg.email}</span>
-            <p>{msg.pesan}</p>
-          </div>
-          <div class="message-item__actions">
-            <button type="button" class="btn-delete" data-id={msg.id}>Hapus</button>
-          </div>
-        </div>
-      ))
-    )}
+  <p id="messageLoading" class="empty-state">Memuat pesan...</p>
+
+  <div id="messageList" class="message-list" style="display:none;"></div>
+
+  <div id="messageEmpty" class="empty-state" style="display:none;">
+    <span class="empty-icon">📭</span>
+    <p>Belum ada pesan masuk.</p>
+    <span class="empty-sub">Pesan dari pengunjung akan muncul di sini.</span>
   </div>
 </div>
 
@@ -89,6 +67,114 @@ const { data: messages } = await supabase
   const cStatus = document.getElementById('cStatus');
   const cSubmitBtn = document.getElementById('cSubmitBtn');
 
+  const messageCountEl = document.getElementById('messageCount');
+  const messageLoadingEl = document.getElementById('messageLoading');
+  const messageListEl = document.getElementById('messageList');
+  const messageEmptyEl = document.getElementById('messageEmpty');
+
+  let contactInfoId = null; // simpan id row contact_info untuk keperluan update
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // --- Load info kontak (isi form) ---
+  async function loadContactInfo() {
+    try {
+      const { data: contact, error } = await supabase.from('contact_info').select('*').single();
+      if (error) throw error;
+
+      contactInfoId = contact?.id ?? null;
+      document.getElementById('cAlamat').value = contact?.alamat ?? '';
+      document.getElementById('cEmail').value = contact?.email ?? '';
+      document.getElementById('cWhatsapp').value = contact?.whatsapp ?? '';
+      document.getElementById('cMap').value = contact?.map_embed_url ?? '';
+    } catch (err) {
+      console.error('Gagal memuat info kontak:', err.message || err);
+    }
+  }
+
+  // --- Load daftar pesan ---
+  async function loadMessages() {
+    messageLoadingEl.style.display = 'block';
+    messageListEl.style.display = 'none';
+    messageEmptyEl.style.display = 'none';
+
+    try {
+      const { data: messages, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const list = messages || [];
+      messageLoadingEl.style.display = 'none';
+      messageCountEl.textContent = `${list.length} Pesan`;
+
+      if (list.length === 0) {
+        messageEmptyEl.style.display = 'block';
+        return;
+      }
+
+      messageListEl.style.display = 'flex';
+      messageListEl.innerHTML = list.map((msg) => `
+        <div class="message-item" data-id="${msg.id}">
+          <div class="message-item__header">
+            <strong>${escapeHtml(msg.nama)}</strong>
+            ${!msg.is_read ? '<span class="badge-unread">Baru</span>' : ''}
+            <span class="message-date">${new Date(msg.created_at).toLocaleString('id-ID')}</span>
+          </div>
+          <div class="message-item__body">
+            <span class="message-email">${escapeHtml(msg.email)}</span>
+            <p>${escapeHtml(msg.pesan)}</p>
+          </div>
+          <div class="message-item__actions">
+            <button type="button" class="btn-delete" data-id="${msg.id}">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+
+      attachDeleteEvents();
+    } catch (err) {
+      messageLoadingEl.style.display = 'none';
+      messageEmptyEl.style.display = 'block';
+      messageEmptyEl.querySelector('p').textContent = 'Gagal memuat pesan.';
+      console.error('Gagal memuat pesan:', err.message || err);
+    }
+  }
+
+  function attachDeleteEvents() {
+    document.querySelectorAll('.btn-delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Hapus pesan ini?')) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Menghapus...';
+
+        try {
+          const { error } = await supabase
+            .from('contact_messages')
+            .delete()
+            .eq('id', btn.dataset.id);
+
+          if (error) throw error;
+
+          await loadMessages(); // reload data, bukan window.location.reload()
+        } catch (err) {
+          alert('Gagal menghapus: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = 'Hapus';
+        }
+      });
+    });
+  }
+
+  // --- Submit form info kontak ---
   contactInfoForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     cSubmitBtn.disabled = true;
@@ -102,19 +188,22 @@ const { data: messages } = await supabase
       map_embed_url: document.getElementById('cMap').value,
     };
 
-    const { data: existing } = await supabase.from('contact_info').select('id').single();
+    try {
+      if (!contactInfoId) throw new Error('ID info kontak tidak ditemukan.');
 
-    const { error } = await supabase
-      .from('contact_info')
-      .update(payload)
-      .eq('id', existing.id);
+      const { error } = await supabase
+        .from('contact_info')
+        .update(payload)
+        .eq('id', contactInfoId);
 
-    if (error) {
-      cStatus.textContent = '❌ Gagal: ' + error.message;
-      cStatus.style.color = '#dc2626';
-    } else {
+      if (error) throw error;
+
       cStatus.textContent = '✅ Tersimpan!';
       cStatus.style.color = '#16a34a';
+    } catch (err) {
+      cStatus.textContent = '❌ Gagal: ' + err.message;
+      cStatus.style.color = '#dc2626';
+    } finally {
       setTimeout(() => {
         cStatus.textContent = '';
         cSubmitBtn.disabled = false;
@@ -122,22 +211,9 @@ const { data: messages } = await supabase
     }
   });
 
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Hapus pesan ini?')) return;
-
-      const { error } = await supabase
-        .from('contact_messages')
-        .delete()
-        .eq('id', btn.dataset.id);
-
-      if (error) {
-        alert('Gagal menghapus: ' + error.message);
-      } else {
-        window.location.reload();
-      }
-    });
-  });
+  // Initial load
+  loadContactInfo();
+  loadMessages();
 </script>
 
 <style>

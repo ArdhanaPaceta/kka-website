@@ -1,61 +1,131 @@
 ---
 // =============================================================
 // components/Schedule.astro
-// Section "Jadwal Kompetisi" — timeline vertikal modern dari Supabase
+// Section "Jadwal Kompetisi" – client‑side fetching, timeline + emoji
 // =============================================================
-import { supabase } from '../lib/supabase';
-
-const { data: jadwalList } = await supabase
-  .from('jadwal_kompetisi')
-  .select('*')
-  .order('tanggal', { ascending: true });
-
-const schedules = (jadwalList ?? []).map((item) => ({
-  date: new Date(item.tanggal).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }),
-  title: item.judul,
-  desc: item.deskripsi,
-}));
 ---
 
 <section class="schedule section" id="jadwal">
   <div class="container">
     <div class="section-header reveal">
-      <span class="section-eyebrow">Jadwal Kompetisi</span>
+      <span class="section-eyebrow">📅 Jadwal Kompetisi</span>
       <h2 class="section-title">Rangkaian Kegiatan KKA 2026</h2>
       <p class="section-subtitle mx-auto">
         Catat tanggal penting berikut agar tidak ketinggalan setiap tahapan kompetisi.
       </p>
     </div>
 
-    {schedules.length === 0 ? (
-      <p class="schedule__empty">Jadwal belum tersedia.</p>
-    ) : (
-      <div class="schedule__timeline">
-        {schedules.map((item, i) => (
-          <div class:list={['schedule__item', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
-            <div class="schedule__dot"></div>
-            <div class="schedule__card card">
-              <span class="schedule__date">{item.date}</span>
-              <h3 class="schedule__title">{item.title}</h3>
-              {item.desc && <p class="schedule__desc">{item.desc}</p>}
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
+    <!-- Loading state -->
+    <div id="scheduleLoading" class="schedule__empty">
+      <span class="text-2xl block mb-2">⏳</span>
+      Memuat jadwal...
+    </div>
+
+    <!-- Empty state -->
+    <div id="scheduleEmpty" class="schedule__empty" style="display:none;">
+      <span class="text-2xl block mb-2">📅</span>
+      Jadwal belum tersedia.
+    </div>
+
+    <!-- Error state -->
+    <div id="scheduleError" class="schedule__empty" style="display:none; color:#dc2626;"></div>
+
+    <!-- Timeline (diisi via JS) -->
+    <div class="schedule__timeline" id="scheduleTimeline" style="display:none;"></div>
   </div>
 </section>
 
+<script type="module">
+  import { supabase } from '../lib/supabase';
+
+  const loadingEl = document.getElementById('scheduleLoading');
+  const emptyEl = document.getElementById('scheduleEmpty');
+  const errorEl = document.getElementById('scheduleError');
+  const timelineEl = document.getElementById('scheduleTimeline');
+
+  // 🎨 Daftar emoji untuk setiap item jadwal (berputar)
+  const scheduleEmojis = ['📋', '🎯', '🏫', '✍️', '📝', '🎓', '🏆', '🎉', '📢', '🔔', '⭐', '💡'];
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function formatTanggal(dateStr) {
+    try {
+      return new Date(dateStr).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  }
+
+  function renderTimeline(items) {
+    timelineEl.innerHTML = items.map((item, i) => {
+      // Pilih emoji berdasarkan index (berputar)
+      const emoji = scheduleEmojis[i % scheduleEmojis.length];
+      
+      return `
+        <div class="schedule__item">
+          <div class="schedule__dot">
+            <span class="schedule__dot-emoji">${emoji}</span>
+          </div>
+          <div class="schedule__card card">
+            <span class="schedule__date">📆 ${formatTanggal(item.tanggal)}</span>
+            <h3 class="schedule__title">${escapeHtml(item.judul)}</h3>
+            ${item.deskripsi ? `<p class="schedule__desc">${escapeHtml(item.deskripsi)}</p>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadSchedule() {
+    loadingEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    timelineEl.style.display = 'none';
+
+    try {
+      const { data, error } = await supabase
+        .from('jadwal_kompetisi')
+        .select('*')
+        .order('tanggal', { ascending: true });
+
+      if (error) throw error;
+
+      loadingEl.style.display = 'none';
+
+      if (!data || data.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      timelineEl.style.display = 'block';
+      renderTimeline(data);
+    } catch (err) {
+      console.error('Gagal fetch jadwal:', err);
+      loadingEl.style.display = 'none';
+      errorEl.textContent = `❌ Gagal memuat jadwal: ${err.message || err}`;
+      errorEl.style.display = 'block';
+    }
+  }
+
+  loadSchedule();
+</script>
+
 <style>
-  .schedule__timeline {
+  :global(.schedule__timeline) {
     position: relative;
     max-width: 760px;
     margin-inline: auto;
-    padding-left: 40px;
+    padding-left: 50px;
   }
 
   .schedule__empty {
@@ -64,66 +134,120 @@ const schedules = (jadwalList ?? []).map((item) => ({
     padding: 40px 0;
   }
 
-  .schedule__timeline::before {
+  :global(.schedule__timeline::before) {
     content: '';
     position: absolute;
-    left: 9px;
-    top: 6px;
-    bottom: 6px;
-    width: 2px;
-    background: var(--color-border);
+    left: 18px;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--color-secondary), var(--color-primary), var(--color-secondary));
+    border-radius: 3px;
   }
 
-  .schedule__item {
+  :global(.schedule__item) {
     position: relative;
-    margin-bottom: 32px;
+    margin-bottom: 36px;
   }
 
-  .schedule__item:last-child {
+  :global(.schedule__item:last-child) {
     margin-bottom: 0;
   }
 
-  .schedule__dot {
+  :global(.schedule__dot) {
     position: absolute;
-    left: -40px;
-    top: 6px;
-    width: 20px;
-    height: 20px;
+    left: -50px;
+    top: 4px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--color-white);
     border: 3px solid var(--color-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+    transition: transform 0.3s, box-shadow 0.3s;
   }
 
-  .schedule__card {
-    padding: 22px 26px;
+  :global(.schedule__dot-emoji) {
+    font-size: 1.1rem;
+    line-height: 1;
   }
 
-  .schedule__date {
+  :global(.schedule__item:hover .schedule__dot) {
+    transform: scale(1.15);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  }
+
+  :global(.schedule__card) {
+    padding: 24px 28px;
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+  }
+
+  :global(.schedule__item:hover .schedule__card) {
+    transform: translateX(6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(.schedule__date) {
     display: inline-block;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     color: var(--color-secondary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
 
-  .schedule__title {
-    font-size: 1.1rem;
+  :global(.schedule__title) {
+    font-size: 1.15rem;
+    font-weight: 700;
     margin-bottom: 8px;
+    color: var(--color-dark);
   }
 
-  .schedule__desc {
+  :global(.schedule__desc) {
     color: var(--color-gray);
-    font-size: 0.9rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Animasi hover untuk card */
+  :global(.schedule__card::before) {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--color-secondary), var(--color-primary));
+    border-radius: 4px 0 0 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  :global(.schedule__item:hover .schedule__card::before) {
+    opacity: 1;
   }
 
   @media (max-width: 560px) {
-    .schedule__timeline {
-      padding-left: 30px;
+    :global(.schedule__timeline) {
+      padding-left: 40px;
     }
-    .schedule__dot {
-      left: -30px;
+    :global(.schedule__dot) {
+      left: -40px;
+      width: 32px;
+      height: 32px;
+    }
+    :global(.schedule__dot-emoji) {
+      font-size: 0.9rem;
+    }
+    :global(.schedule__card) {
+      padding: 18px 20px;
     }
   }
 </style>

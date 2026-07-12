@@ -1,149 +1,231 @@
 ---
-import { supabase } from '../../lib/supabase';
-
-const { data: footer } = await supabase.from('footer_content').select('*').single();
-const { data: socialLinks } = await supabase.from('footer_social_links').select('*').order('urutan', { ascending: true });
+// =============================================================
+// components/admin/FooterForm.astro
+// Panel ADMIN untuk kelola Footer (client‑side, Tailwind)
+// =============================================================
 ---
 
-<div class="form-card">
-  <div class="card-header">
+<div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
     <div>
-      <h2>Kelola Footer</h2>
-      <p class="form-hint">Atur informasi kontak dan sosial media di footer. Quick Links otomatis mengikuti menu Navbar.</p>
+      <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola Footer</h2>
+      <p class="text-slate-500 text-sm m-0 leading-snug">Atur informasi kontak dan sosial media di footer. Quick Links otomatis mengikuti menu Navbar.</p>
     </div>
   </div>
 
   <!-- FORM INFO FOOTER -->
-  <form id="footerInfoForm" class="footer-info-form">
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="logo_url">URL Logo</label>
-        <input type="text" id="logo_url" name="logo_url" value={footer?.logo_url || ''} placeholder="https://example.com/logo.png" />
+  <form id="footerInfoForm" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="logo_url" class="font-semibold text-[0.87rem] text-slate-800">URL Logo</label>
+        <input type="text" id="logo_url" name="logo_url" placeholder="https://example.com/logo.png"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="tagline">Tagline</label>
-        <input type="text" id="tagline" name="tagline" value={footer?.tagline || ''} placeholder="Tagline website" />
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="alamat">Alamat</label>
-      <input type="text" id="alamat" name="alamat" value={footer?.alamat || ''} placeholder="Jl. Contoh No. 123, Kota" />
-    </div>
-
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" value={footer?.email || ''} placeholder="info@example.com" />
-      </div>
-      <div class="field">
-        <label for="telepon">Telepon</label>
-        <input type="text" id="telepon" name="telepon" value={footer?.telepon || ''} placeholder="+62 812 3456 7890" />
+      <div class="flex flex-col gap-1.5">
+        <label for="tagline" class="font-semibold text-[0.87rem] text-slate-800">Tagline</label>
+        <input type="text" id="tagline" name="tagline" placeholder="Tagline website"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
     </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn-primary">Simpan Info Footer</button>
-      <span id="footerStatus" class="status-text"></span>
+    <div class="flex flex-col gap-1.5">
+      <label for="alamat" class="font-semibold text-[0.87rem] text-slate-800">Alamat</label>
+      <input type="text" id="alamat" name="alamat" placeholder="Jl. Contoh No. 123, Kota"
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="email" class="font-semibold text-[0.87rem] text-slate-800">Email</label>
+        <input type="email" id="email" name="email" placeholder="info@example.com"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label for="telepon" class="font-semibold text-[0.87rem] text-slate-800">Telepon</label>
+        <input type="text" id="telepon" name="telepon" placeholder="+62 812 3456 7890"
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4 flex-wrap pt-2">
+      <button type="submit" class="inline-flex items-center gap-2 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed">Simpan Info Footer</button>
+      <span id="footerStatus" class="font-medium text-sm min-h-[1.8rem]"></span>
     </div>
   </form>
 
-  <hr class="form-divider" />
+  <hr class="border-0 border-t-2 border-slate-200 my-5" />
 
   <!-- SOSIAL MEDIA -->
-  <div class="section-header">
-    <h3>Sosial Media</h3>
-    <button type="button" id="btnTambahSosial" class="btn-primary btn-add">
-      <span class="plus-icon">+</span> Tambah Sosial Media
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+    <h3 class="text-[1.1rem] font-bold text-slate-900">Sosial Media</h3>
+    <button type="button" id="btnTambahSosial" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap">
+      <span class="text-lg leading-none">+</span> Tambah Sosial Media
     </button>
   </div>
 
-  <div id="socialList" class="social-list">
-    {(socialLinks ?? []).length === 0 ? (
-      <div class="empty-state">
-        <span class="empty-icon">🔗</span>
-        <p>Belum ada sosial media.</p>
-        <span class="empty-sub">Klik tombol "Tambah Sosial Media" untuk mulai.</span>
-      </div>
-    ) : (
-      socialLinks.map((item) => (
-        <div class="social-item" data-id={item.id}>
-          <div class="social-item__info">
-            <div class="social-item__header">
-              <span class="social-icon">{item.icon || '🌐'}</span>
-              <strong>{item.label}</strong>
-              <span class="badge-urutan">Urutan #{item.urutan}</span>
-            </div>
-            <a href={item.href} target="_blank" rel="noopener" class="social-link">
-              {item.href}
-            </a>
-          </div>
-          <div class="social-item__actions">
-            <button
-              type="button"
-              class="btn-edit"
-              data-id={item.id}
-              data-label={item.label}
-              data-href={item.href}
-              data-icon={item.icon}
-              data-urutan={item.urutan}
-            >Edit</button>
-            <button type="button" class="btn-delete" data-id={item.id}>Hapus</button>
-          </div>
-        </div>
-      ))
-    )}
+  <!-- Error banner -->
+  <div id="footerErrorBanner" class="hidden items-start gap-2.5 bg-red-50 border border-red-200 px-4 py-3.5 rounded-[10px] mb-6">
+    <span class="text-lg leading-snug">⚠️</span>
+    <div>
+      <p class="m-0 text-red-700 text-sm leading-snug"><strong>Gagal memuat data:</strong> <span id="footerErrorMsg"></span></p>
+      <p class="text-[0.82rem] text-red-800 mt-1">Pastikan tabel "footer_social_links" ada dan RLS mengizinkan SELECT.</p>
+    </div>
   </div>
 
-  <!-- FORM TAMBAH/EDIT SOSIAL MEDIA -->
-  <div id="socialForm" class="social-form hidden">
-    <hr class="form-divider" />
-    <h3 id="socialFormTitle">Tambah Sosial Media</h3>
+  <!-- Loading state (social list) -->
+  <div id="socialLoadingState" class="text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <div class="text-[1.8rem] mb-2">⏳</div>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Memuat data sosial media...</p>
+  </div>
+
+  <!-- List sosial media (diisi via JS) -->
+  <div id="socialList" class="hidden flex-col gap-2.5 mb-6"></div>
+
+  <!-- Empty state -->
+  <div id="socialEmptyState" class="hidden text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <span class="text-2xl mb-2 block">🔗</span>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Belum ada sosial media.</p>
+    <span class="text-sm text-slate-400">Klik tombol "Tambah Sosial Media" untuk mulai.</span>
+  </div>
+
+  <!-- Form Tambah/Edit Sosial Media (SEKARANG <form>) -->
+  <form id="socialForm" class="hidden overflow-hidden max-h-0 opacity-0 -translate-y-1.5 transition-all duration-300 ease-in-out">
+    <hr class="border-0 border-t-2 border-slate-200 my-2 mb-5" />
+    <h3 id="socialFormTitle" class="text-[1.1rem] font-bold text-slate-900 mb-5">Tambah Sosial Media</h3>
     <input type="hidden" id="socialId" />
 
-    <div class="form-grid-2">
-      <div class="field">
-        <label for="socialLabel">Nama Platform</label>
-        <input type="text" id="socialLabel" placeholder="Instagram" required />
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="socialLabel" class="font-semibold text-[0.87rem] text-slate-800">Nama Platform</label>
+        <input type="text" id="socialLabel" placeholder="Instagram" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
-      <div class="field">
-        <label for="socialUrutan">Urutan</label>
-        <input type="number" id="socialUrutan" value="1" required />
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="socialUrutan" class="font-semibold text-[0.87rem] text-slate-800">Urutan</label>
+        <input type="number" id="socialUrutan" value="1" required
+          class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
       </div>
     </div>
 
-    <div class="field">
-      <label for="socialIcon">Icon (emoji)</label>
-      <input type="text" id="socialIcon" placeholder="📷" />
-      <small class="field-hint">Contoh: 📷, 🐦, 📘, 💼 (opsional)</small>
+    <div class="flex flex-col gap-1.5 mb-4">
+      <label for="socialIcon" class="font-semibold text-[0.87rem] text-slate-800">Icon (emoji)</label>
+      <input type="text" id="socialIcon" placeholder="📷"
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
+      <small class="text-slate-400 text-[0.78rem] mt-0.5">Contoh: 📷, 🐦, 📘, 💼 (opsional)</small>
     </div>
 
-    <div class="field">
-      <label for="socialHref">Link</label>
-      <input type="text" id="socialHref" placeholder="https://instagram.com/..." required />
+    <div class="flex flex-col gap-1.5 mb-4">
+      <label for="socialHref" class="font-semibold text-[0.87rem] text-slate-800">Link</label>
+      <input type="text" id="socialHref" placeholder="https://instagram.com/..." required
+        class="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition" />
     </div>
 
-    <p class="status-text" id="socialStatus"></p>
+    <p id="socialStatus" class="font-medium text-sm rounded-lg transition mb-4"></p>
 
-    <div class="form-actions">
-      <button type="button" id="btnBatalSosial" class="btn-outline">Batal</button>
-      <button type="submit" class="btn-primary">Simpan</button>
+    <div class="flex gap-3 flex-wrap">
+      <button type="button" id="btnBatalSosial" class="bg-transparent border border-slate-300 text-slate-600 px-5 py-2.5 rounded-xl font-medium hover:bg-slate-100 hover:border-slate-400 transition">Batal</button>
+      <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0">Simpan</button>
     </div>
-  </div>
+  </form>
 </div>
 
 <script type="module">
   import { supabase } from '../../lib/supabase';
 
-  // --- FORM INFO FOOTER ---
+  // --- DOM Elements ---
   const footerInfoForm = document.getElementById('footerInfoForm');
   const footerStatus = document.getElementById('footerStatus');
+  const socialLoadingState = document.getElementById('socialLoadingState');
+  const socialListEl = document.getElementById('socialList');
+  const socialEmptyState = document.getElementById('socialEmptyState');
+  const socialForm = document.getElementById('socialForm');
+  const socialFormTitle = document.getElementById('socialFormTitle');
+  const socialId = document.getElementById('socialId');
+  const socialStatus = document.getElementById('socialStatus');
+  const errorBanner = document.getElementById('footerErrorBanner');
+  const errorMsg = document.getElementById('footerErrorMsg');
+  const btnTambahSosial = document.getElementById('btnTambahSosial');
+  const btnBatalSosial = document.getElementById('btnBatalSosial');
 
+  // --- State Management ---
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorBanner.classList.remove('hidden');
+    errorBanner.classList.add('flex');
+  }
+
+  function hideError() {
+    errorBanner.classList.add('hidden');
+    errorBanner.classList.remove('flex');
+  }
+
+  function showSocialLoading() {
+    socialLoadingState.classList.remove('hidden');
+    socialListEl.classList.add('hidden');
+    socialListEl.classList.remove('flex');
+    socialEmptyState.classList.add('hidden');
+  }
+
+  function showSocialList() {
+    socialLoadingState.classList.add('hidden');
+    socialListEl.classList.remove('hidden');
+    socialListEl.classList.add('flex');
+    socialEmptyState.classList.add('hidden');
+  }
+
+  function showSocialEmpty() {
+    socialLoadingState.classList.add('hidden');
+    socialListEl.classList.add('hidden');
+    socialListEl.classList.remove('flex');
+    socialEmptyState.classList.remove('hidden');
+  }
+
+  function resetSocialForm() {
+    socialForm.reset();
+    socialId.value = '';
+    socialFormTitle.textContent = 'Tambah Sosial Media';
+    document.getElementById('socialUrutan').value = 1;
+    socialStatus.textContent = '';
+    socialStatus.className = 'font-medium text-sm rounded-lg transition mb-4';
+  }
+
+  function setSocialStatus(msg, type) {
+    socialStatus.textContent = msg;
+    socialStatus.className = 'font-medium text-sm rounded-lg transition mb-4';
+    if (type === 'error') socialStatus.classList.add('text-red-700', 'bg-red-50', 'px-3', 'py-2.5');
+    else if (type === 'success') socialStatus.classList.add('text-emerald-800', 'bg-emerald-100', 'px-3', 'py-2.5');
+    else if (type === 'loading') socialStatus.classList.add('text-blue-800', 'bg-blue-100', 'px-3', 'py-2.5');
+  }
+
+  function setFooterStatus(msg, type) {
+    footerStatus.textContent = msg;
+    footerStatus.className = 'font-medium text-sm min-h-[1.8rem]';
+    if (type === 'error') footerStatus.classList.add('text-red-600');
+    else if (type === 'success') footerStatus.classList.add('text-emerald-700');
+    else if (type === 'loading') footerStatus.classList.add('text-blue-600');
+  }
+
+  // --- Load Footer Info ---
+  async function loadFooterInfo() {
+    try {
+      const { data, error } = await supabase.from('footer_content').select('*').single();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) {
+        document.getElementById('logo_url').value = data.logo_url || '';
+        document.getElementById('tagline').value = data.tagline || '';
+        document.getElementById('alamat').value = data.alamat || '';
+        document.getElementById('email').value = data.email || '';
+        document.getElementById('telepon').value = data.telepon || '';
+      }
+    } catch (err) {
+      console.error('Gagal memuat info footer:', err);
+    }
+  }
+
+  // --- Simpan Info Footer ---
   footerInfoForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    footerStatus.textContent = '⏳ Menyimpan...';
-    footerStatus.style.color = '#2563eb';
-
+    setFooterStatus('⏳ Menyimpan...', 'loading');
     const payload = {
       logo_url: document.getElementById('logo_url').value.trim(),
       tagline: document.getElementById('tagline').value.trim(),
@@ -152,476 +234,168 @@ const { data: socialLinks } = await supabase.from('footer_social_links').select(
       telepon: document.getElementById('telepon').value.trim(),
     };
 
-    const { data: existing } = await supabase.from('footer_content').select('id').single();
-
-    const { error } = await supabase
-      .from('footer_content')
-      .update(payload)
-      .eq('id', existing.id);
-
-    if (error) {
-      footerStatus.textContent = '❌ Gagal: ' + error.message;
-      footerStatus.style.color = '#dc2626';
-    } else {
-      footerStatus.textContent = '✅ Tersimpan!';
-      footerStatus.style.color = '#16a34a';
-      setTimeout(() => (footerStatus.textContent = ''), 2000);
+    try {
+      const { data: existing } = await supabase.from('footer_content').select('id').single();
+      let error;
+      if (existing) {
+        ({ error } = await supabase.from('footer_content').update(payload).eq('id', existing.id));
+      } else {
+        ({ error } = await supabase.from('footer_content').insert(payload));
+      }
+      if (error) throw error;
+      setFooterStatus('✅ Tersimpan!', 'success');
+      setTimeout(() => setFooterStatus('', ''), 2000);
+    } catch (err) {
+      setFooterStatus('❌ Gagal: ' + err.message, 'error');
     }
   });
 
-  // --- CRUD SOSIAL MEDIA ---
-  const btnTambahSosial = document.getElementById('btnTambahSosial');
-  const socialForm = document.getElementById('socialForm');
-  const btnBatalSosial = document.getElementById('btnBatalSosial');
-  const socialFormTitle = document.getElementById('socialFormTitle');
-  const socialId = document.getElementById('socialId');
-  const socialStatus = document.getElementById('socialStatus');
+  // --- CRUD Sosial Media ---
+  async function loadSocialLinks() {
+    showSocialLoading();
+    hideError();
+    try {
+      const { data, error } = await supabase
+        .from('footer_social_links')
+        .select('*')
+        .order('urutan', { ascending: true });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        showSocialEmpty();
+        return;
+      }
+      renderSocialList(data);
+      showSocialList();
+    } catch (err) {
+      console.error('Gagal fetch social links:', err);
+      showError(err.message);
+    }
+  }
 
-  function resetSocialForm() {
-    socialForm.reset();
-    socialId.value = '';
-    socialFormTitle.textContent = 'Tambah Sosial Media';
-    document.getElementById('socialUrutan').value = 1;
-    socialStatus.textContent = '';
-    socialStatus.style.color = '';
+  function renderSocialList(items) {
+    socialListEl.innerHTML = items.map((item) => `
+      <div class="flex items-center flex-wrap sm:flex-nowrap gap-3.5 px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/60 hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition" data-id="${item.id}">
+        <div class="flex-1 min-w-[150px]">
+          <div class="flex items-center flex-wrap gap-2 mb-1">
+            <span class="text-lg">${item.icon || '🌐'}</span>
+            <strong class="text-[0.98rem] text-slate-900">${item.label}</strong>
+            <span class="bg-indigo-50 text-blue-600 text-[0.7rem] font-bold px-2.5 py-0.5 rounded-full tracking-wide">Urutan #${item.urutan}</span>
+          </div>
+          <a href="${item.href}" target="_blank" rel="noopener" class="text-blue-600 text-[0.85rem] break-all hover:underline">${item.href}</a>
+        </div>
+        <div class="flex gap-1.5 flex-shrink-0 w-full justify-end sm:w-auto">
+          <button type="button" class="btn-edit-social text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1"
+            data-id="${item.id}" data-label="${item.label}" data-href="${item.href}" data-icon="${item.icon || ''}" data-urutan="${item.urutan}">
+            ✏️ <span>Edit</span>
+          </button>
+          <button type="button" class="btn-delete-social text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition inline-flex items-center gap-1" data-id="${item.id}">
+            🗑️ <span>Hapus</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    attachSocialRowEvents();
+  }
+
+  function attachSocialRowEvents() {
+    socialListEl.querySelectorAll('.btn-edit-social').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        socialId.value = btn.dataset.id;
+        document.getElementById('socialLabel').value = btn.dataset.label;
+        document.getElementById('socialHref').value = btn.dataset.href;
+        document.getElementById('socialIcon').value = btn.dataset.icon || '';
+        document.getElementById('socialUrutan').value = btn.dataset.urutan;
+        socialFormTitle.textContent = 'Edit Sosial Media';
+        openSocialForm();
+        document.getElementById('socialLabel').focus();
+        setSocialStatus('', '');
+      });
+    });
+
+    socialListEl.querySelectorAll('.btn-delete-social').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Yakin ingin menghapus sosial media ini?')) return;
+        const id = btn.dataset.id;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '⏳ <span>Menghapus...</span>';
+        btn.disabled = true;
+        try {
+          const { error } = await supabase.from('footer_social_links').delete().eq('id', id);
+          if (error) throw error;
+          await loadSocialLinks();
+        } catch (err) {
+          alert('Gagal menghapus: ' + err.message);
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function openSocialForm() {
+    socialForm.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      socialForm.classList.remove('max-h-0', 'opacity-0', '-translate-y-1.5');
+      socialForm.classList.add('max-h-[900px]', 'opacity-100', 'translate-y-0');
+    });
+    socialForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function closeSocialForm() {
+    socialForm.classList.remove('max-h-[900px]', 'opacity-100', 'translate-y-0');
+    socialForm.classList.add('max-h-0', 'opacity-0', '-translate-y-1.5');
+    setTimeout(() => {
+      socialForm.classList.add('hidden');
+      resetSocialForm();
+    }, 200);
   }
 
   btnTambahSosial.addEventListener('click', () => {
     resetSocialForm();
-    socialForm.classList.remove('hidden');
-    socialForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    openSocialForm();
     document.getElementById('socialLabel').focus();
   });
 
-  btnBatalSosial.addEventListener('click', () => {
-    socialForm.classList.add('hidden');
-    resetSocialForm();
-  });
+  btnBatalSosial.addEventListener('click', closeSocialForm);
 
-  // Edit buttons
-  document.querySelectorAll('.btn-edit').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      socialId.value = btn.dataset.id;
-      document.getElementById('socialLabel').value = btn.dataset.label;
-      document.getElementById('socialHref').value = btn.dataset.href;
-      document.getElementById('socialIcon').value = btn.dataset.icon || '';
-      document.getElementById('socialUrutan').value = btn.dataset.urutan;
-      socialFormTitle.textContent = 'Edit Sosial Media';
-      socialForm.classList.remove('hidden');
-      socialForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  });
-
-  // Delete buttons
-  document.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Yakin ingin menghapus sosial media ini?')) return;
-
-      const { error } = await supabase
-        .from('footer_social_links')
-        .delete()
-        .eq('id', btn.dataset.id);
-
-      if (error) {
-        alert('Gagal menghapus: ' + error.message);
-      } else {
-        window.location.reload();
-      }
-    });
-  });
-
-  // Submit social form
+  // SEKARANG socialForm adalah <form>, event submit akan bekerja
   socialForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const label = document.getElementById('socialLabel').value.trim();
     const href = document.getElementById('socialHref').value.trim();
     const icon = document.getElementById('socialIcon').value.trim();
     const urutan = parseInt(document.getElementById('socialUrutan').value, 10);
 
     if (!label || !href) {
-      socialStatus.textContent = '⚠️ Nama platform dan link wajib diisi.';
-      socialStatus.style.color = '#f59e0b';
+      setSocialStatus('⚠️ Nama platform dan link wajib diisi.', 'error');
       return;
     }
 
-    socialStatus.textContent = '⏳ Menyimpan...';
-    socialStatus.style.color = '#2563eb';
-
+    setSocialStatus('⏳ Menyimpan...', 'loading');
     const payload = { label, href, icon: icon || null, urutan };
-    let error;
 
-    if (socialId.value) {
-      ({ error } = await supabase.from('footer_social_links').update(payload).eq('id', socialId.value));
-    } else {
-      ({ error } = await supabase.from('footer_social_links').insert(payload));
-    }
+    try {
+      let error;
+      if (socialId.value) {
+        ({ error } = await supabase.from('footer_social_links').update(payload).eq('id', socialId.value));
+      } else {
+        ({ error } = await supabase.from('footer_social_links').insert(payload));
+      }
+      if (error) throw error;
 
-    if (error) {
-      socialStatus.textContent = '❌ Gagal: ' + error.message;
-      socialStatus.style.color = '#dc2626';
-    } else {
-      socialStatus.textContent = '✅ Tersimpan! Halaman akan dimuat ulang...';
-      socialStatus.style.color = '#16a34a';
-      setTimeout(() => window.location.reload(), 1000);
+      setSocialStatus('✅ Tersimpan!', 'success');
+      setTimeout(async () => {
+        closeSocialForm();
+        resetSocialForm();
+        await loadSocialLinks();
+      }, 800);
+    } catch (err) {
+      setSocialStatus('❌ Gagal: ' + err.message, 'error');
     }
   });
+
+  // --- Init ---
+  loadFooterInfo();
+  loadSocialLinks();
 </script>
-
-<style>
-  /* ----- CARD UTAMA ----- */
-  .form-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-card h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 0.2rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin: 1.5rem 0 1rem 0;
-  }
-
-  .section-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0;
-  }
-
-  /* ----- TOMBOL ----- */
-  .btn-primary {
-    background: #2563eb;
-    border: none;
-    color: #fff;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    white-space: nowrap;
-  }
-  .btn-primary:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-  }
-  .btn-primary:active {
-    transform: scale(0.97);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-add .plus-icon {
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-
-  .btn-outline {
-    background: transparent;
-    border: 1px solid #d1d9e6;
-    color: #475569;
-    padding: 0.6rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .btn-outline:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-  }
-
-  /* ----- FORM INFO FOOTER ----- */
-  .footer-info-form {
-    margin-bottom: 0.5rem;
-  }
-
-  .form-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #1e293b;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.65rem 0.75rem;
-    border: 1px solid #d1d9e6;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fff;
-    font-family: inherit;
-    width: 100%;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 60px;
-  }
-
-  .field-hint {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    margin-top: 0.2rem;
-  }
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .status-text {
-    font-weight: 500;
-    font-size: 0.95rem;
-    min-height: 1.8rem;
-  }
-
-  .form-divider {
-    border: 0;
-    border-top: 2px solid #e9edf4;
-    margin: 1.5rem 0 1.25rem 0;
-  }
-
-  /* ----- SOCIAL LIST ----- */
-  .social-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .social-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    padding: 0.9rem 1rem;
-    background: #fafcff;
-    border-radius: 10px;
-    border: 1px solid #eef2f6;
-    transition: border-color 0.2s, background 0.2s;
-    gap: 0.75rem;
-  }
-  .social-item:hover {
-    background: #f8fafc;
-    border-color: #d9e2ef;
-  }
-
-  .social-item__info {
-    flex: 1;
-    min-width: 150px;
-  }
-
-  .social-item__header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-bottom: 0.2rem;
-  }
-  .social-item__header strong {
-    font-size: 1rem;
-    color: #0f172a;
-  }
-
-  .social-icon {
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-
-  .badge-urutan {
-    background: #eef2ff;
-    color: #2563eb;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.7rem;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
-  }
-
-  .social-link {
-    color: #2563eb;
-    font-size: 0.85rem;
-    text-decoration: none;
-    word-break: break-all;
-  }
-  .social-link:hover {
-    text-decoration: underline;
-  }
-
-  .social-item__actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-
-  .btn-edit,
-  .btn-delete {
-    border: none;
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-    background: transparent;
-  }
-
-  .btn-edit {
-    color: #2563eb;
-    background: #eff6ff;
-  }
-  .btn-edit:hover {
-    background: #dbeafe;
-  }
-
-  .btn-delete {
-    color: #dc2626;
-    background: #fef2f2;
-  }
-  .btn-delete:hover {
-    background: #fee2e2;
-  }
-
-  /* ----- EMPTY STATE ----- */
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    background: #fafcff;
-    border-radius: 12px;
-    border: 1px dashed #d9e2ef;
-  }
-  .empty-icon {
-    font-size: 2.4rem;
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-  .empty-state p {
-    font-weight: 600;
-    color: #334155;
-    margin: 0;
-  }
-  .empty-sub {
-    font-size: 0.9rem;
-    color: #94a3b8;
-  }
-
-  /* ----- FORM SOCIAL (TOGGLE) ----- */
-  .social-form {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    animation: slideDown 0.3s ease forwards;
-  }
-  .social-form.hidden {
-    display: none;
-  }
-
-  @keyframes slideDown {
-    0% {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .social-form h3 {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0 0 1.25rem 0;
-  }
-
-  /* ----- RESPONSIF ----- */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1rem;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .section-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-add {
-      justify-content: center;
-      width: 100%;
-    }
-    .form-grid-2 {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .social-item {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .social-item__actions {
-      justify-content: flex-end;
-    }
-    .form-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-primary {
-      justify-content: center;
-    }
-  }
-</style>

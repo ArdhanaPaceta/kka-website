@@ -1,14 +1,8 @@
 ---
 // =============================================================
 // components/AlurPendaftaran.astro
-// Section "Alur Pendaftaran" — timeline langkah dari Supabase
+// Section "Alur Pendaftaran" – client-side fetching
 // =============================================================
-import { supabase } from '../lib/supabase';
-
-const { data: steps } = await supabase
-  .from('alur_pendaftaran')
-  .select('*')
-  .order('urutan', { ascending: true });
 ---
 
 <section class="flow section" id="alur-pendaftaran">
@@ -22,65 +16,278 @@ const { data: steps } = await supabase
       </p>
     </div>
 
-    {(steps ?? []).length === 0 ? (
-      <p class="flow__empty">Alur pendaftaran belum tersedia.</p>
-    ) : (
-      <div class="flow__timeline">
-        {steps.map((step, i) => (
-          <div class:list={['flow__step', 'reveal', `reveal-delay-${(i % 4) + 1}`]}>
-            <div class="flow__number">{String(step.urutan).padStart(2, '0')}</div>
-            <h3 class="flow__title">{step.judul}</h3>
-            <p class="flow__desc">{step.deskripsi}</p>
-          </div>
-        ))}
-      </div>
-    )}
+    <!-- Loading state -->
+    <div id="flowLoading" class="flow__empty">
+      <span class="flow__loading-spinner"></span>
+      Memuat alur pendaftaran...
+    </div>
+
+    <!-- Empty state -->
+    <div id="flowEmpty" class="flow__empty" style="display:none;">
+      Alur pendaftaran belum tersedia.
+    </div>
+
+    <!-- Error state -->
+    <div id="flowError" class="flow__empty flow__empty--error" style="display:none;"></div>
+
+    <!-- Timeline (diisi via JS) -->
+    <div class="flow__timeline" id="flowTimeline" style="display:none;"></div>
   </div>
 </section>
 
-<style>
-  .flow__timeline {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 24px;
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const loadingEl = document.getElementById('flowLoading');
+  const emptyEl = document.getElementById('flowEmpty');
+  const errorEl = document.getElementById('flowError');
+  const timelineEl = document.getElementById('flowTimeline');
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (errorEl) {
+      errorEl.textContent = 'Konfigurasi Supabase tidak ditemukan.';
+      errorEl.style.display = 'block';
+    }
+    throw new Error('Supabase credentials missing');
   }
 
-  .flow__empty {
-    text-align: center;
-    color: var(--color-gray);
-    padding: 40px 0;
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
-  .flow__step {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  // Palet warna aksen, dipakai bergantian tiap langkah biar tidak monoton
+  const accentPalette = ['accent-blue', 'accent-indigo', 'accent-violet', 'accent-sky', 'accent-cyan'];
+
+  function renderTimeline(items) {
+    if (!timelineEl) return;
+
+    timelineEl.innerHTML = items.map((step, i) => {
+      const accent = accentPalette[i % accentPalette.length];
+      const isLast = i === items.length - 1;
+
+      const arrowHtml = isLast ? '' : `
+        <div class="flow__arrow" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 10h11M10 4.5L15.5 10 10 15.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      `;
+
+      return `
+        <div class="flow__step ${accent}">
+          <div class="flow__step-badge">
+            <span class="flow__step-digit">${String(step.urutan).padStart(2, '0')}</span>
+          </div>
+          <h3 class="flow__title">${escapeHtml(step.judul)}</h3>
+          <p class="flow__desc">${escapeHtml(step.deskripsi)}</p>
+        </div>
+        ${arrowHtml}
+      `;
+    }).join('');
   }
 
-  .flow__number {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--color-secondary, #2563eb);
-  }
+  async function loadFlow() {
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (errorEl) errorEl.style.display = 'none';
+    if (timelineEl) timelineEl.style.display = 'none';
 
-  .flow__title {
-    font-size: 1.05rem;
-  }
+    try {
+      const { data, error } = await supabase
+        .from('alur_pendaftaran')
+        .select('*')
+        .order('urutan', { ascending: true });
 
-  .flow__desc {
-    color: var(--color-gray);
-    font-size: 0.9rem;
-  }
+      if (error) throw error;
 
-  @media (max-width: 900px) {
-    .flow__timeline {
-      grid-template-columns: repeat(2, 1fr);
+      if (loadingEl) loadingEl.style.display = 'none';
+
+      if (!data || data.length === 0) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+      }
+
+      if (timelineEl) {
+        timelineEl.style.display = 'flex';
+        renderTimeline(data);
+      }
+    } catch (err) {
+      console.error('Gagal fetch alur:', err);
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (errorEl) {
+        errorEl.textContent = `Gagal memuat alur: ${err.message || err}`;
+        errorEl.style.display = 'block';
+      }
     }
   }
 
-  @media (max-width: 500px) {
-    .flow__timeline {
-      grid-template-columns: 1fr;
+  loadFlow();
+</script>
+
+<style>
+  /* PENTING: kartu langkah & panah di dalam #flowTimeline di-inject lewat
+     innerHTML, jadi WAJIB dibungkus :global(...) supaya style tetap kena. */
+
+  .flow__empty {
+    text-align: center;
+    color: var(--color-gray, #64748b);
+    padding: 48px 0;
+    font-size: 0.95rem;
+  }
+
+  .flow__empty--error {
+    color: #dc2626;
+  }
+
+  .flow__loading-spinner {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border: 3px solid rgba(37, 99, 235, 0.15);
+    border-top-color: var(--color-secondary, #2563eb);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  :global(.flow__timeline) {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  :global(.flow__step) {
+    position: relative;
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 32px 22px;
+    background: #ffffff;
+    border: 1px solid #eef1f6;
+    border-radius: 18px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    overflow: hidden;
+  }
+
+  :global(.flow__step::before) {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--flow-accent, #2563eb);
+    opacity: 0.85;
+  }
+
+  :global(.flow__step:hover) {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.09);
+    border-color: rgba(37, 99, 235, 0.15);
+  }
+
+  :global(.flow__step-badge) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--flow-accent, #2563eb), var(--flow-accent-dark, #1d4ed8));
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--flow-accent, #2563eb) 35%, transparent);
+    transition: transform 0.25s ease;
+  }
+
+  :global(.flow__step:hover .flow__step-badge) {
+    transform: scale(1.08) rotate(-4deg);
+  }
+
+  :global(.flow__step-digit) {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+  }
+
+  :global(.flow__title) {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-dark, #1e293b);
+    margin: 4px 0 0 0;
+    line-height: 1.3;
+  }
+
+  :global(.flow__desc) {
+    color: var(--color-gray, #64748b);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Warna aksen per langkah */
+  :global(.flow__step.accent-blue)    { --flow-accent: #2563eb; --flow-accent-dark: #1d4ed8; }
+  :global(.flow__step.accent-indigo)  { --flow-accent: #6366f1; --flow-accent-dark: #4f46e5; }
+  :global(.flow__step.accent-violet)  { --flow-accent: #8b5cf6; --flow-accent-dark: #7c3aed; }
+  :global(.flow__step.accent-sky)     { --flow-accent: #0ea5e9; --flow-accent-dark: #0284c7; }
+  :global(.flow__step.accent-cyan)    { --flow-accent: #06b6d4; --flow-accent-dark: #0891b2; }
+
+  /* Panah penghubung antar langkah */
+  :global(.flow__arrow) {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    color: #cbd5e1;
+  }
+
+  @media (max-width: 768px) {
+    :global(.flow__timeline) {
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    :global(.flow__step) {
+      flex: 1 1 auto;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 22px 20px;
+    }
+
+    :global(.flow__step-badge) {
+      flex-shrink: 0;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+    }
+
+    :global(.flow__step-digit) {
+      font-size: 1.1rem;
+    }
+
+    :global(.flow__arrow) {
+      width: auto;
+      transform: rotate(90deg);
+      margin: -6px 0;
     }
   }
 </style>
