@@ -1,0 +1,528 @@
+/* =========================================================
+   DASHBOARD.CSS
+   Stylesheet khusus halaman Dashboard Admin.
+   Mengambil warna, radius, dan shadow dari token di global.css
+   (--color-primary, --color-accent, --color-gray, dst).
+   Warna status (sukses/peringatan) dan avatar didefinisikan
+   lokal di sini karena sifatnya spesifik untuk dashboard.
+   ========================================================= */
+
+:root {
+  /* Warna status - dipakai konsisten di kartu, bar komposisi, & badge tabel */
+  --dash-success: #10B981;
+  --dash-success-bg: #ECFDF5;
+  --dash-success-text: #047857;
+
+  --dash-warning-bg: #FFF7ED;
+  --dash-warning-text: #B45309;
+
+  --dash-danger: #DC2626;
+  --dash-danger-border: #FCA5A5;
+  --dash-danger-bg: #FEF2F2;
+}
+
+.dash {
+  background: var(--color-light);
+  min-height: 100vh;
+  padding-block: 40px;
+  padding-inline: 16px;
+}
+
+.dash__inner {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+/* ---------------------------------------------------------
+   HEADER
+--------------------------------------------------------- */
+.dash-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.dash-header__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dash-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-dark));
+  box-shadow: var(--shadow-md);
+}
+
+.dash-title {
+  font-size: clamp(1.5rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  color: var(--color-dark);
+  margin-top: -2px;
+}
+
+.dash-header__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-dark);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 7px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-admin-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dash-success);
+  animation: dash-pulse 2s ease-in-out infinite;
+}
+
+.dash-logout-btn {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dash-danger);
+  background: transparent;
+  border: 1.5px solid var(--dash-danger-border);
+  border-radius: 999px;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.dash-logout-btn:hover {
+  background: var(--dash-danger);
+  color: var(--color-white);
+  border-color: var(--dash-danger);
+}
+
+/* ---------------------------------------------------------
+   KARTU RINGKASAN (STATS)
+--------------------------------------------------------- */
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .dash-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .dash-stats { grid-template-columns: repeat(4, 1fr); }
+}
+
+.dash-stat-card {
+  position: relative;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px 20px 20px 24px;
+  overflow: hidden;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.dash-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.dash-stat-card__bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.dash-stat-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dash-stat-card__value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-stat-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.dash-stat-card__label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-gray);
+  margin-top: 10px;
+}
+
+/* Skeleton */
+.dash-skeleton {
+  background: var(--color-border);
+  border-radius: 6px;
+  animation: dash-pulse-bg 1.6s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------
+   KOMPOSISI STATUS
+--------------------------------------------------------- */
+.dash-composition {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.dash-composition__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.dash-composition__title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gray);
+}
+
+.dash-composition__total {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-gray);
+}
+
+.dash-comp-bar {
+  height: 10px;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+  display: flex;
+}
+
+.dash-comp-bar__segment {
+  height: 100%;
+  transition: width var(--transition-base);
+}
+.dash-comp-bar__segment:first-child { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
+.dash-comp-bar__segment:last-child { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
+
+.dash-legend {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 24px;
+  row-gap: 6px;
+  margin-top: 14px;
+}
+
+.dash-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--color-dark);
+}
+
+.dash-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dash-legend__count {
+  font-weight: 600;
+}
+
+.dash-legend__pct {
+  color: var(--color-gray);
+}
+
+.dash-composition__empty {
+  font-size: 0.8rem;
+  color: var(--color-gray);
+}
+
+/* ---------------------------------------------------------
+   TABEL PENDAFTAR
+--------------------------------------------------------- */
+.dash-table-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+.dash-table-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dash-table-card__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-dark);
+}
+
+.dash-table-card__subtitle {
+  font-size: 0.78rem;
+  color: var(--color-gray);
+  margin-top: 2px;
+}
+
+.dash-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-white);
+  background: var(--color-secondary);
+  border: none;
+  border-radius: 999px;
+  padding: 9px 20px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.dash-refresh-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.dash-refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.dash-refresh-btn__icon {
+  display: inline-block;
+}
+
+.dash-table-wrap {
+  overflow-x: auto;
+  margin-inline: -4px;
+  padding-inline: 4px;
+}
+
+.dash-table {
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  min-width: 680px;
+  border-collapse: collapse;
+}
+
+.dash-table thead tr {
+  border-bottom: 2px solid var(--color-border);
+}
+
+.dash-table th {
+  padding: 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-gray);
+}
+
+.dash-table tbody tr {
+  border-top: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.dash-table tbody tr:hover {
+  background: var(--color-light);
+}
+
+.dash-table td {
+  padding: 14px 12px;
+  color: var(--color-gray);
+  vertical-align: middle;
+}
+
+.dash-code {
+  background: var(--color-light);
+  color: var(--color-gray);
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.dash-student {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.dash-student__name {
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.dash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.dash-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.dash-badge--success { background: var(--dash-success-bg); color: var(--dash-success-text); }
+.dash-badge--warning { background: var(--dash-warning-bg); color: var(--dash-warning-text); }
+.dash-badge--neutral { background: var(--color-light); color: var(--color-gray); }
+
+.dash-date {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--color-gray);
+}
+
+/* ---------------------------------------------------------
+   STATE: LOADING / KOSONG / ERROR
+--------------------------------------------------------- */
+.dash-state {
+  padding: 56px 16px;
+  text-align: center;
+}
+
+.dash-state__stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-state__icon {
+  font-size: 1.5rem;
+}
+
+.dash-state__title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.dash-state__hint {
+  font-size: 0.75rem;
+  color: var(--color-gray);
+}
+
+.dash-state--error .dash-state__title {
+  color: var(--dash-danger);
+}
+
+.dash-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-secondary);
+  border-radius: 50%;
+  animation: dash-spin 0.7s linear infinite;
+}
+
+.dash-error-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--dash-danger-bg);
+  border: 1px solid var(--dash-danger-border);
+  color: var(--dash-danger);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------
+   ANIMASI
+--------------------------------------------------------- */
+@keyframes dash-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dash-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes dash-pulse-bg {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-admin-badge__dot,
+  .dash-skeleton,
+  .dash-spinner {
+    animation: none;
+  }
+}

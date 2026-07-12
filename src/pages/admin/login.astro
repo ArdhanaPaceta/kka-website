@@ -1,0 +1,80 @@
+---
+// src/pages/admin/login.astro
+---
+
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Admin | KKA</title>
+  <style>
+    /* CSS sama seperti sebelumnya, ditambah sedikit perbaikan */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: system-ui, sans-serif; background:#f8fafc; }
+    .login-page { min-height:100vh; display:flex; justify-content:center; align-items:center; }
+    .login-card { width:400px; background:white; border-radius:12px; padding:40px; box-shadow:0 10px 25px rgba(0,0,0,.08); }
+    .login-header { text-align:center; margin-bottom:25px; }
+    .login-header h1 { color:#1E3A8A; margin:0; }
+    .login-header p { color:#64748B; margin-top:10px; }
+    .form-group { margin-bottom:20px; }
+    label { display:block; margin-bottom:8px; font-weight:600; }
+    input { width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; }
+    input:focus { outline:none; border-color:#2563EB; }
+    button { width:100%; padding:12px; border:none; border-radius:8px; background:#2563EB; color:white; cursor:pointer; font-size:16px; }
+    button:hover { background:#1D4ED8; }
+    .error { margin-top:15px; color:#dc2626; font-size:14px; }
+  </style>
+</head>
+<body>
+  <main class="login-page">
+    <div class="login-card">
+      <div class="login-header">
+        <h1>Login Admin</h1>
+        <p>Silakan masuk menggunakan akun administrator.</p>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="Masukkan email" required />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="Masukkan password" required />
+        </div>
+        <button type="submit">Login</button>
+        <p id="error" class="error"></p>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { authService } from '../../services/authService';
+
+    const form = document.querySelector('#loginForm');
+    const error = document.querySelector('#error');
+
+    // Jika sudah login, langsung ke dashboard
+    const admin = await authService.getAdmin();
+    if (admin) {
+      window.location.replace('/admin/dashboard');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error.textContent = '';
+
+      const email = document.querySelector('#email').value.trim();
+      const password = document.querySelector('#password').value;
+
+      try {
+        await authService.login(email, password);
+        window.location.replace('/admin/dashboard');
+      } catch (err) {
+        error.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>

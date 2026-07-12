@@ -1,100 +1,78 @@
-import { supabase } from "../lib/supabase";
+// src/services/authService.js
+import { supabase } from '../lib/supabase'; // pastikan file ini ada
 
-export interface AdminUser {
-  id: string;
-  nama: string;
-  role: "admin" | "superadmin";
-}
+/**
+ * @typedef {Object} AdminUser
+ * @property {string} id
+ * @property {string} nama
+ * @property {"admin"|"superadmin"} role
+ */
 
 class AuthService {
   /**
-   * Login menggunakan Supabase Auth
+   * Login
+   * @param {string} email
+   * @param {string} password
+   * @returns {Promise<AdminUser>}
    */
-  async login(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  async login(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error('Login gagal, user tidak ditemukan.');
 
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (!data.user) {
-      throw new Error("User tidak ditemukan.");
-    }
-
-    // Pastikan user ada pada tabel admin
+    // Cek di tabel admin
     const { data: admin, error: adminError } = await supabase
-      .from("admin")
-      .select("id, nama, role")
-      .eq("id", data.user.id)
+      .from('admin')
+      .select('id, nama, role')
+      .eq('id', data.user.id)
       .single();
 
     if (adminError || !admin) {
+      // Logout otomatis jika bukan admin
       await supabase.auth.signOut();
-      throw new Error("Akun ini bukan administrator.");
+      throw new Error('Akun ini bukan administrator.');
     }
 
-    return admin as AdminUser;
+    return admin;
   }
 
-  /**
-   * Logout
-   */
   async logout() {
     const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
   }
 
   /**
-   * Mengambil user login
+   * @returns {Promise<import('@supabase/supabase-js').User|null>}
    */
   async getUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     return user;
   }
 
-  /**
-   * Mengambil session
-   */
   async getSession() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
+    const { data: { session } } = await supabase.auth.getSession();
     return session;
   }
 
   /**
-   * Mengambil data admin
+   * @returns {Promise<AdminUser|null>}
    */
-  async getAdmin(): Promise<AdminUser | null> {
+  async getAdmin() {
     const user = await this.getUser();
-
     if (!user) return null;
 
     const { data } = await supabase
-      .from("admin")
-      .select("id, nama, role")
-      .eq("id", user.id)
+      .from('admin')
+      .select('id, nama, role')
+      .eq('id', user.id)
       .single();
 
-    return data as AdminUser | null;
+    return data ?? null;
   }
 
-  /**
-   * Mengecek apakah user sudah login
-   */
   async isAuthenticated() {
     const session = await this.getSession();
-    return session !== null;
+    return !!session;
   }
 }
 

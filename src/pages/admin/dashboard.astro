@@ -1,0 +1,299 @@
+---
+// src/pages/admin/dashboard.astro
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import '../../styles/global.css';
+import '../../styles/dashboard.css';
+
+---
+
+<AdminLayout title="Dashboard Admin | KKA">
+  <section class="dash">
+    <div class="dash__inner">
+
+      <!-- Header -->
+      <div class="dash-header">
+        <div class="dash-header__left">
+          <div class="dash-icon">📊</div>
+          <div>
+            <span class="section-eyebrow">Panel Admin · KKA</span>
+            <h1 class="dash-title">Dashboard Pendaftaran</h1>
+          </div>
+        </div>
+        <div class="dash-header__right">
+          <span class="dash-admin-badge" id="adminName">
+            <span class="dash-admin-badge__dot"></span>
+            Admin
+          </span>
+          <button id="logoutBtn" class="dash-logout-btn">Keluar</button>
+        </div>
+      </div>
+
+      <!-- Ringkasan -->
+      <div class="dash-stats" id="statsGrid">
+        <!-- Skeleton loading -->
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__bar dash-skeleton"></div>
+          <div class="dash-skeleton" style="height:34px; width:56px; margin-bottom:12px;"></div>
+          <div class="dash-skeleton" style="height:14px; width:100px;"></div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__bar dash-skeleton"></div>
+          <div class="dash-skeleton" style="height:34px; width:56px; margin-bottom:12px;"></div>
+          <div class="dash-skeleton" style="height:14px; width:100px;"></div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__bar dash-skeleton"></div>
+          <div class="dash-skeleton" style="height:34px; width:56px; margin-bottom:12px;"></div>
+          <div class="dash-skeleton" style="height:14px; width:100px;"></div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__bar dash-skeleton"></div>
+          <div class="dash-skeleton" style="height:34px; width:56px; margin-bottom:12px;"></div>
+          <div class="dash-skeleton" style="height:14px; width:100px;"></div>
+        </div>
+      </div>
+
+      <!-- Komposisi status -->
+      <div class="dash-composition" id="compositionCard">
+        <div class="dash-composition__head">
+          <span class="dash-composition__title">Komposisi Status Pendaftar</span>
+          <span id="compTotal" class="dash-composition__total"></span>
+        </div>
+        <div id="compBar" class="dash-comp-bar"></div>
+        <div id="compLegend" class="dash-legend"></div>
+      </div>
+
+      <!-- Tabel pendaftar terbaru -->
+      <div class="dash-table-card">
+        <div class="dash-table-card__head">
+          <div>
+            <h2 class="dash-table-card__title">Pendaftar Terbaru</h2>
+            <p class="dash-table-card__subtitle">10 pendaftaran paling baru masuk, urut dari yang terakhir</p>
+          </div>
+          <button id="refreshBtn" class="dash-refresh-btn">
+            <span id="refreshIcon" class="dash-refresh-btn__icon">↻</span> Perbarui
+          </button>
+        </div>
+        <div class="dash-table-wrap">
+          <table class="dash-table" id="pendaftarTable">
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Nama Siswa</th>
+                <th>Asal Sekolah</th>
+                <th>Kabupaten</th>
+                <th>Status</th>
+                <th>Tanggal</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="6">
+                  <div class="dash-state">
+                    <div class="dash-state__stack">
+                      <span class="dash-spinner"></span>
+                      <span class="dash-state__title">Memuat data...</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</AdminLayout>
+
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+  import { authService } from '../../services/authService';
+
+  const admin = await authService.getAdmin();
+  if (!admin) {
+    window.location.replace('/admin/login');
+    throw new Error('Unauthorized');
+  }
+
+  document.getElementById('adminName').innerHTML =
+    `<span class="dash-admin-badge__dot"></span> ${admin.nama} (${admin.role})`;
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await authService.logout();
+    window.location.replace('/admin/login');
+  });
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  const statsGrid = document.getElementById('statsGrid');
+  const compBar = document.getElementById('compBar');
+  const compLegend = document.getElementById('compLegend');
+  const compTotal = document.getElementById('compTotal');
+  const tableBody = document.getElementById('tableBody');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const refreshIcon = document.getElementById('refreshIcon');
+
+  const STAT_CARDS = [
+    { key: 'total', label: 'Total Pendaftar', icon: '👥', bar: 'var(--color-primary)', text: 'var(--color-primary)', iconBg: 'var(--color-light)' },
+    { key: 'menunggu', label: 'Menunggu Pembayaran', icon: '⏳', bar: 'var(--color-accent)', text: 'var(--dash-warning-text)', iconBg: 'var(--dash-warning-bg)' },
+    { key: 'lunas', label: 'Lunas', icon: '✅', bar: 'var(--dash-success)', text: 'var(--dash-success-text)', iconBg: 'var(--dash-success-bg)' },
+    { key: 'lainnya', label: 'Status Lain', icon: '📌', bar: 'var(--color-gray)', text: 'var(--color-gray)', iconBg: 'var(--color-light)' },
+  ];
+
+  const AVATAR_PALETTE = ['#1E3A8A', '#2563EB', '#F59E0B', '#10B981', '#7C3AED', '#DC2626'];
+
+  function initials(name) {
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+  }
+
+  function colorForName(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+  }
+
+  async function loadAllData() {
+    refreshIcon.style.transition = 'transform 0.6s linear';
+    refreshIcon.style.transform = 'rotate(360deg)';
+    refreshBtn.disabled = true;
+    await Promise.all([loadSummary(), loadRecentPendaftar()]);
+    setTimeout(() => { refreshIcon.style.transform = 'rotate(0deg)'; }, 600);
+    refreshBtn.disabled = false;
+  }
+
+  async function loadSummary() {
+    try {
+      const { data, error } = await supabase.from('pendaftar').select('status');
+      if (error) throw error;
+
+      const total = data.length;
+      const menunggu = data.filter(d => d.status === 'Menunggu Pembayaran').length;
+      const lunas = data.filter(d => d.status === 'Lunas').length;
+      const lainnya = total - menunggu - lunas;
+      const values = { total, menunggu, lunas, lainnya };
+
+      statsGrid.innerHTML = STAT_CARDS.map(card => `
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__bar" style="background:${card.bar}"></div>
+          <div class="dash-stat-card__top">
+            <span class="dash-stat-card__value" style="color:${card.text}">${values[card.key]}</span>
+            <span class="dash-stat-card__icon" style="background:${card.iconBg}">${card.icon}</span>
+          </div>
+          <span class="dash-stat-card__label">${card.label}</span>
+        </div>
+      `).join('');
+
+      if (total === 0) {
+        compBar.innerHTML = '';
+        compLegend.innerHTML = `<span class="dash-composition__empty">Belum ada pendaftar untuk ditampilkan.</span>`;
+        compTotal.textContent = '';
+      } else {
+        const segments = [
+          { label: 'Lunas', value: lunas, color: 'var(--dash-success)' },
+          { label: 'Menunggu Pembayaran', value: menunggu, color: 'var(--color-accent)' },
+          { label: 'Status Lain', value: lainnya, color: 'var(--color-gray)' },
+        ];
+        compBar.innerHTML = segments
+          .filter(s => s.value > 0)
+          .map(s => `<div class="dash-comp-bar__segment" style="width:${(s.value / total * 100).toFixed(1)}%; background:${s.color}"></div>`)
+          .join('');
+        compLegend.innerHTML = segments.map(s => `
+          <span class="dash-legend__item">
+            <span class="dash-legend__dot" style="background:${s.color}"></span>
+            ${s.label} <span class="dash-legend__count">${s.value}</span>
+            <span class="dash-legend__pct">(${(s.value / total * 100).toFixed(0)}%)</span>
+          </span>
+        `).join('');
+        compTotal.textContent = `${total} total`;
+      }
+    } catch (err) {
+      statsGrid.innerHTML = `<div class="dash-error-banner">⚠️ Ringkasan gagal dimuat: ${err.message}</div>`;
+      compBar.innerHTML = '';
+      compLegend.innerHTML = '';
+    }
+  }
+
+  async function loadRecentPendaftar() {
+    try {
+      const { data, error } = await supabase
+        .from('pendaftar')
+        .select(`
+          kode_pendaftaran,
+          nama_siswa,
+          status,
+          created_at,
+          sekolah:sekolah_id (nama),
+          kecamatan:kecamatan_id (nama),
+          kabupaten:kabupaten_id (nama)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      if (data.length === 0) {
+        tableBody.innerHTML = `
+          <tr><td colspan="6">
+            <div class="dash-state">
+              <div class="dash-state__stack">
+                <span class="dash-state__icon">📭</span>
+                <span class="dash-state__title">Belum ada pendaftar</span>
+                <span class="dash-state__hint">Data akan muncul di sini begitu ada yang mendaftar.</span>
+              </div>
+            </div>
+          </td></tr>`;
+        return;
+      }
+
+      tableBody.innerHTML = data.map(row => {
+        const tgl = new Date(row.created_at).toLocaleDateString('id-ID', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+        const namaSekolah = row.sekolah?.nama || '-';
+        const namaKabupaten = row.kabupaten?.nama || '-';
+        const avatarColor = colorForName(row.nama_siswa || '?');
+
+        let badgeClass = 'dash-badge--neutral';
+        if (row.status === 'Lunas') badgeClass = 'dash-badge--success';
+        else if (row.status === 'Menunggu Pembayaran') badgeClass = 'dash-badge--warning';
+
+        return `
+          <tr>
+            <td><code class="dash-code">${row.kode_pendaftaran}</code></td>
+            <td>
+              <div class="dash-student">
+                <span class="dash-avatar" style="background:${avatarColor}">${initials(row.nama_siswa || '?')}</span>
+                <span class="dash-student__name">${row.nama_siswa}</span>
+              </div>
+            </td>
+            <td>${namaSekolah}</td>
+            <td>${namaKabupaten}</td>
+            <td>
+              <span class="dash-badge ${badgeClass}">
+                <span class="dash-badge__dot"></span>${row.status}
+              </span>
+            </td>
+            <td class="dash-date">${tgl}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      tableBody.innerHTML = `
+        <tr><td colspan="6">
+          <div class="dash-state dash-state--error">
+            <div class="dash-state__stack">
+              <span class="dash-state__icon">⚠️</span>
+              <span class="dash-state__title">Data gagal dimuat: ${err.message}</span>
+            </div>
+          </div>
+        </td></tr>`;
+    }
+  }
+
+  refreshBtn.addEventListener('click', loadAllData);
+  loadAllData();
+</script>
