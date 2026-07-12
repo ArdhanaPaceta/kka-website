@@ -1,269 +1,264 @@
 ---
-// TIDAK ADA LAGI fetch data di sini!
-// Frontmatter Astro hanya jalan saat build time (untuk output: 'static')
-// Data list akan di-render sepenuhnya lewat client-side JS di bawah.
+// =============================================================
+// components/admin/AboutForm.astro
+// Panel ADMIN untuk kelola kartu keunggulan (teks saja)
+// =============================================================
 ---
 
-<div class="form-card">
-  <div class="card-header">
-    <div class="header-title">
-      <div class="header-icon">✨</div>
+<div class="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)]">
+  <div class="flex flex-col items-stretch gap-4 mb-7 sm:flex-row sm:items-start sm:justify-between sm:flex-wrap">
+    <div class="flex items-start gap-3.5">
+      <div class="flex-shrink-0 w-[42px] h-[42px] rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-xl shadow-[0_4px_10px_rgba(37,99,235,0.25)]">
+        ✨
+      </div>
       <div>
-        <h2>Kelola About (Keunggulan)</h2>
-        <p class="form-hint">Atur kartu keunggulan yang tampil di section "Tentang Kompetisi".</p>
+        <h2 class="text-[1.35rem] font-bold text-slate-900 mt-1 mb-1">Kelola About (Keunggulan)</h2>
+        <p class="text-slate-500 text-sm m-0 leading-snug">Atur kartu keunggulan yang tampil di section "Tentang Kompetisi".</p>
       </div>
     </div>
-    <button type="button" id="btnTambah" class="btn-primary btn-add">
-      <span class="plus-icon">+</span> Tambah Keunggulan
+    <button
+      type="button"
+      id="about-btnTambah"
+      class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 whitespace-nowrap"
+    >
+      <span class="text-lg leading-none">+</span> Tambah Keunggulan
     </button>
   </div>
 
-  <!-- Error banner (kosong dulu, diisi JS kalau fetch gagal) -->
-  <div id="errorBanner" class="error-banner" style="display:none;">
-    <span class="error-icon">⚠️</span>
+  <div id="about-errorBanner" class="hidden items-start gap-2.5 bg-red-50 border border-red-200 px-4 py-3.5 rounded-[10px] mb-6">
+    <span class="text-lg leading-snug">⚠️</span>
     <div>
-      <p><strong>Gagal memuat data:</strong> <span id="errorMsg"></span></p>
-      <p class="error-hint">Pastikan tabel "keunggulan" ada dan RLS mengizinkan SELECT.</p>
+      <p class="m-0 text-red-700 text-sm leading-snug"><strong>Gagal memuat data:</strong> <span id="about-errorMsg"></span></p>
+      <p class="text-[0.82rem] text-red-800 mt-1">Pastikan tabel "keunggulan" ada dan RLS mengizinkan SELECT.</p>
     </div>
   </div>
 
-  <!-- Loading state -->
-  <div id="loadingState" class="empty-state">
-    <div class="empty-icon">⏳</div>
-    <p>Memuat data...</p>
+  <div id="about-loadingState" class="text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <div class="text-[1.8rem] mb-2">⏳</div>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Memuat data...</p>
   </div>
 
-  <!-- LIST ITEMS - akan diisi via JS -->
-  <div id="itemList" class="menu-list" style="display:none;"></div>
+  <div id="about-itemList" class="hidden flex-col gap-2.5 mb-6"></div>
 
-  <!-- Empty state - akan ditampilkan via JS kalau data kosong -->
-  <div id="emptyState" class="empty-state" style="display:none;">
-    <div class="empty-icon">📋</div>
-    <p>Belum ada data keunggulan.</p>
-    <span class="empty-sub">Klik tombol "Tambah Keunggulan" untuk mulai.</span>
+  <div id="about-emptyState" class="hidden text-center py-11 px-4 bg-slate-50 rounded-2xl border-[1.5px] border-dashed border-slate-200">
+    <div class="text-2xl mb-2">📋</div>
+    <p class="font-semibold text-slate-700 m-0 mb-1">Belum ada data keunggulan.</p>
+    <span class="text-sm text-slate-400">Klik tombol "Tambah Keunggulan" untuk mulai.</span>
   </div>
 
-  <!-- FORM TAMBAH/EDIT -->
-  <div id="itemForm" class="item-form hidden">
-    <div class="form-inner">
-      <hr class="form-divider" />
-      <h3 id="formTitle">Tambah Keunggulan</h3>
-      <input type="hidden" id="itemId" />
+  <form id="about-itemForm" class="hidden overflow-hidden max-h-0 opacity-0 -translate-y-1.5 transition-all duration-300 ease-in-out">
+    <div class="pt-1">
+      <hr class="border-0 border-t-2 border-slate-200 my-2 mb-5" />
+      <h3 id="about-formTitle" class="text-[1.1rem] font-bold text-slate-900 mb-5 flex items-center gap-1.5">📝 Tambah Keunggulan</h3>
+      <input type="hidden" id="about-itemId" />
 
-      <div class="form-grid">
-        <div class="field field--wide">
-          <label for="judul">Judul <span class="required">*</span></label>
-          <input type="text" id="judul" name="judul" placeholder="Contoh: Kompetisi Adil" required maxlength="80" />
+      <div class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-0 sm:gap-4">
+        <div class="flex flex-col gap-1.5 mb-4">
+          <label for="about-judul" class="font-semibold text-[0.87rem] text-slate-800 flex items-center justify-between">
+            Judul <span class="text-red-600">*</span>
+          </label>
+          <input
+            type="text" id="about-judul" name="judul" placeholder="Contoh: Kompetisi Adil" required maxlength="80"
+            class="w-full box-border px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white font-inherit focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition"
+          />
         </div>
-
-        <div class="field">
-          <label for="urutan">Urutan Tampil <span class="required">*</span></label>
-          <input type="number" id="urutan" name="urutan" value="1" min="1" required />
+        <div class="flex flex-col gap-1.5 mb-4">
+          <label for="about-urutan" class="font-semibold text-[0.87rem] text-slate-800 flex items-center justify-between">
+            Urutan Tampil <span class="text-red-600">*</span>
+          </label>
+          <input
+            type="number" id="about-urutan" name="urutan" value="1" min="1" required
+            class="w-full box-border px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white font-inherit focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition"
+          />
         </div>
       </div>
 
-      <div class="field">
-        <label for="deskripsi">
-          Deskripsi <span class="required">*</span>
-          <span class="char-count" id="charCount">0/200</span>
+      <div class="flex flex-col gap-1.5 mb-4">
+        <label for="about-deskripsi" class="font-semibold text-[0.87rem] text-slate-800 flex items-center justify-between">
+          <span>Deskripsi <span class="text-red-600">*</span></span>
+          <span class="char-count font-medium text-xs text-slate-400" id="about-charCount">0/200</span>
         </label>
-        <textarea id="deskripsi" name="deskripsi" rows="3" maxlength="200" placeholder="Tulis deskripsi keunggulan di sini..." required></textarea>
+        <textarea
+          id="about-deskripsi" name="deskripsi" rows="3" maxlength="200" placeholder="Tulis deskripsi keunggulan di sini..." required
+          class="w-full box-border px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-xl text-[0.93rem] bg-white font-inherit resize-y min-h-[75px] focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition"
+        ></textarea>
       </div>
 
-      <div class="field">
-        <label for="gambar_url">URL Gambar / Icon</label>
-        <div class="image-input-row">
-          <input type="text" id="gambar_url" name="gambar_url" placeholder="contoh: /images/icon1.png" />
-          <div class="image-preview" id="imagePreview">
-            <span id="previewPlaceholder">🖼️</span>
-            <img id="previewImg" style="display:none;" />
-          </div>
-        </div>
-        <small class="field-hint">Kosongkan jika tidak ada gambar (akan tampil icon default).</small>
-      </div>
+      <!-- Tidak ada lagi upload gambar -->
+      <div id="about-itemStatus" class="font-medium text-sm rounded-lg transition"></div>
 
-      <div id="itemStatus" class="status-text"></div>
-
-      <div class="form-actions">
-        <button type="button" id="btnBatal" class="btn-outline">Batal</button>
-        <button type="submit" id="btnSubmit" class="btn-primary">
+      <div class="flex gap-3 mt-2 flex-wrap">
+        <button type="button" id="about-btnBatal" class="bg-transparent border border-slate-300 text-slate-600 px-5 py-2.5 rounded-xl font-medium hover:bg-slate-100 hover:border-slate-400 transition">Batal</button>
+        <button type="submit" id="about-btnSubmit" class="inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-600 to-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-[0_3px_10px_rgba(37,99,235,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(37,99,235,0.32)] active:translate-y-0 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0">
           <span class="btn-text">Simpan Data</span>
-          <span class="btn-loading" style="display:none;"><span class="spinner"></span> Menyimpan...</span>
+          <span class="btn-loading hidden items-center gap-1.5">
+            <span class="w-[13px] h-[13px] border-2 border-white/40 border-t-white rounded-full inline-block animate-spin"></span>
+            Menyimpan...
+          </span>
         </button>
       </div>
     </div>
-  </div>
+  </form>
 </div>
 
 <script type="module">
   import { supabase } from '../../lib/supabase';
 
   // DOM Elements
-  const btnTambah = document.getElementById('btnTambah');
-  const itemForm = document.getElementById('itemForm');
-  const btnBatal = document.getElementById('btnBatal');
-  const btnSubmit = document.getElementById('btnSubmit');
-  const formTitle = document.getElementById('formTitle');
-  const itemId = document.getElementById('itemId');
-  const statusEl = document.getElementById('itemStatus');
-  const deskripsiEl = document.getElementById('deskripsi');
-  const charCount = document.getElementById('charCount');
-  const gambarUrlEl = document.getElementById('gambar_url');
-  const previewImg = document.getElementById('previewImg');
-  const previewPlaceholder = document.getElementById('previewPlaceholder');
+  const btnTambah = document.getElementById('about-btnTambah');
+  const itemForm = document.getElementById('about-itemForm');
+  const btnBatal = document.getElementById('about-btnBatal');
+  const btnSubmit = document.getElementById('about-btnSubmit');
+  const formTitle = document.getElementById('about-formTitle');
+  const itemId = document.getElementById('about-itemId');
+  const statusEl = document.getElementById('about-itemStatus');
+  const deskripsiEl = document.getElementById('about-deskripsi');
+  const charCount = document.getElementById('about-charCount');
 
-  const itemListEl = document.getElementById('itemList');
-  const emptyStateEl = document.getElementById('emptyState');
-  const loadingStateEl = document.getElementById('loadingState');
-  const errorBannerEl = document.getElementById('errorBanner');
-  const errorMsgEl = document.getElementById('errorMsg');
+  const itemListEl = document.getElementById('about-itemList');
+  const emptyStateEl = document.getElementById('about-emptyState');
+  const loadingStateEl = document.getElementById('about-loadingState');
+  const errorBannerEl = document.getElementById('about-errorBanner');
+  const errorMsgEl = document.getElementById('about-errorMsg');
 
   const submitText = btnSubmit.querySelector('.btn-text');
   const submitLoading = btnSubmit.querySelector('.btn-loading');
 
-  // --- Fetch & Render List (INI YANG BARU: jalan di browser tiap load) ---
+  // --- Fetch & Render List (tanpa gambar) ---
   async function loadItems() {
-    loadingStateEl.style.display = 'block';
-    itemListEl.style.display = 'none';
-    emptyStateEl.style.display = 'none';
-    errorBannerEl.style.display = 'none';
+    loadingStateEl.classList.remove('hidden');
+    itemListEl.classList.add('hidden');
+    itemListEl.classList.remove('flex');
+    emptyStateEl.classList.add('hidden');
+    errorBannerEl.classList.add('hidden');
+    errorBannerEl.classList.remove('flex');
 
     try {
       const { data, error } = await supabase
         .from('keunggulan')
-        .select('*')
+        .select('id, judul, deskripsi, urutan')
         .order('urutan', { ascending: true });
 
       if (error) throw error;
 
-      loadingStateEl.style.display = 'none';
+      loadingStateEl.classList.add('hidden');
 
       if (!data || data.length === 0) {
-        emptyStateEl.style.display = 'block';
+        emptyStateEl.classList.remove('hidden');
         return;
       }
 
-      itemListEl.style.display = 'block';
+      itemListEl.classList.remove('hidden');
+      itemListEl.classList.add('flex');
       itemListEl.innerHTML = data.map((item) => `
-        <div class="menu-item" data-id="${item.id}">
-          <div class="menu-item__thumb">
-            ${item.gambar_url
-              ? `<img src="${item.gambar_url}" alt="${item.judul}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />`
-              : ''}
-            <div class="thumb-fallback" style="${item.gambar_url ? 'display:none;' : 'display:flex;'}">🖼️</div>
-          </div>
-          <div class="menu-item__info">
-            <div class="item-header">
-              <strong>${item.judul}</strong>
-              <span class="badge-urutan">#${item.urutan}</span>
+        <div class="flex items-center flex-wrap sm:flex-nowrap gap-3.5 px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/60 hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition" data-id="${item.id}">
+          <div class="flex-1 min-w-[150px]">
+            <div class="flex items-center flex-wrap gap-2 mb-1">
+              <strong class="text-[0.98rem] text-slate-900">${item.judul}</strong>
+              <span class="bg-indigo-50 text-blue-600 text-[0.7rem] font-bold px-2.5 py-0.5 rounded-full tracking-wide">#${item.urutan}</span>
             </div>
-            <p class="item-desc">${item.deskripsi}</p>
+            <p class="text-slate-500 text-[0.87rem] mt-0.5 leading-snug line-clamp-2">${item.deskripsi}</p>
           </div>
-          <div class="menu-item__actions">
-            <button type="button" class="btn-edit"
+          <div class="flex gap-1.5 flex-shrink-0 w-full justify-end sm:w-auto">
+            <button type="button" class="about-btn-edit inline-flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition"
               data-id="${item.id}"
               data-judul="${item.judul.replace(/"/g, '&quot;')}"
               data-deskripsi="${item.deskripsi.replace(/"/g, '&quot;')}"
-              data-gambar="${item.gambar_url || ''}"
               data-urutan="${item.urutan}"
               title="Edit">✏️ <span>Edit</span></button>
-            <button type="button" class="btn-delete" data-id="${item.id}" title="Hapus">🗑️ <span>Hapus</span></button>
+            <button type="button" class="about-btn-delete inline-flex items-center gap-1 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg text-[0.8rem] font-medium transition" data-id="${item.id}" title="Hapus">🗑️ <span>Hapus</span></button>
           </div>
         </div>
       `).join('');
 
       attachRowEvents();
     } catch (err) {
-      loadingStateEl.style.display = 'none';
-      errorBannerEl.style.display = 'flex';
+      loadingStateEl.classList.add('hidden');
+      errorBannerEl.classList.remove('hidden');
+      errorBannerEl.classList.add('flex');
       errorMsgEl.textContent = err.message;
       console.error('Gagal fetch keunggulan:', err);
     }
   }
 
-  // --- Reset Form ---
   function resetForm() {
-    itemForm.reset();
+    document.getElementById('about-judul').value = '';
+    document.getElementById('about-deskripsi').value = '';
+    document.getElementById('about-urutan').value = '1';
     itemId.value = '';
-    formTitle.textContent = 'Tambah Keunggulan';
-    document.getElementById('urutan').value = 1;
-    statusEl.textContent = '';
-    statusEl.className = 'status-text';
-    submitText.style.display = 'inline';
-    submitLoading.style.display = 'none';
+    formTitle.textContent = '📝 Tambah Keunggulan';
+    setStatus('', null);
+    submitText.classList.remove('hidden');
+    submitLoading.classList.add('hidden');
+    submitLoading.classList.remove('inline-flex');
     btnSubmit.disabled = false;
     updateCharCount();
-    updatePreview();
   }
 
   function setStatus(msg, type) {
     statusEl.textContent = msg;
-    statusEl.className = 'status-text';
-    if (type === 'error') statusEl.classList.add('status-error');
-    else if (type === 'success') statusEl.classList.add('status-success');
-    else if (type === 'loading') statusEl.classList.add('status-loading');
+    statusEl.className = 'font-medium text-sm rounded-lg transition';
+    if (!msg) return;
+    if (type === 'error') statusEl.className += ' bg-red-50 text-red-700 px-3 py-2.5';
+    else if (type === 'success') statusEl.className += ' bg-emerald-100 text-emerald-800 px-3 py-2.5';
+    else if (type === 'loading') statusEl.className += ' bg-blue-100 text-blue-800 px-3 py-2.5';
   }
 
   function updateCharCount() {
     const len = deskripsiEl.value.length;
     charCount.textContent = `${len}/200`;
-    charCount.classList.toggle('char-count--warn', len > 180);
+    charCount.classList.toggle('text-red-600', len > 180);
+    charCount.classList.toggle('text-slate-400', len <= 180);
   }
   deskripsiEl.addEventListener('input', updateCharCount);
 
-  function updatePreview() {
-    const url = gambarUrlEl.value.trim();
-    if (url) {
-      previewImg.src = url;
-      previewImg.style.display = 'block';
-      previewPlaceholder.style.display = 'none';
-      previewImg.onerror = () => {
-        previewImg.style.display = 'none';
-        previewPlaceholder.style.display = 'block';
-      };
-    } else {
-      previewImg.style.display = 'none';
-      previewPlaceholder.style.display = 'block';
-    }
+  function openForm() {
+    itemForm.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      itemForm.classList.remove('max-h-0', 'opacity-0', '-translate-y-1.5');
+      itemForm.classList.add('max-h-[900px]', 'opacity-100', 'translate-y-0');
+    });
+    itemForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  gambarUrlEl.addEventListener('input', updatePreview);
+
+  function closeForm() {
+    itemForm.classList.remove('max-h-[900px]', 'opacity-100', 'translate-y-0');
+    itemForm.classList.add('max-h-0', 'opacity-0', '-translate-y-1.5');
+    setTimeout(() => itemForm.classList.add('hidden'), 200);
+  }
 
   btnTambah.addEventListener('click', () => {
     resetForm();
-    itemForm.classList.remove('hidden');
-    requestAnimationFrame(() => itemForm.classList.add('open'));
-    itemForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    document.getElementById('judul').focus();
+    openForm();
+    document.getElementById('about-judul').focus();
   });
 
   btnBatal.addEventListener('click', () => {
-    itemForm.classList.remove('open');
-    setTimeout(() => itemForm.classList.add('hidden'), 200);
+    closeForm();
     resetForm();
   });
 
-  // --- Event untuk tombol edit/delete (dipanggil ulang tiap render) ---
   function attachRowEvents() {
-    document.querySelectorAll('.btn-edit').forEach((btn) => {
+    itemListEl.querySelectorAll('.about-btn-edit').forEach((btn) => {
       btn.addEventListener('click', () => {
         itemId.value = btn.dataset.id;
-        document.getElementById('judul').value = btn.dataset.judul;
-        document.getElementById('deskripsi').value = btn.dataset.deskripsi;
-        document.getElementById('gambar_url').value = btn.dataset.gambar || '';
-        document.getElementById('urutan').value = btn.dataset.urutan;
-        formTitle.textContent = 'Edit Keunggulan';
-        itemForm.classList.remove('hidden');
-        requestAnimationFrame(() => itemForm.classList.add('open'));
-        itemForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        document.getElementById('judul').focus();
+        document.getElementById('about-judul').value = btn.dataset.judul;
+        document.getElementById('about-deskripsi').value = btn.dataset.deskripsi;
+        document.getElementById('about-urutan').value = btn.dataset.urutan;
+        formTitle.textContent = '📝 Edit Keunggulan';
+        openForm();
+        document.getElementById('about-judul').focus();
         updateCharCount();
-        updatePreview();
       });
     });
 
-    document.querySelectorAll('.btn-delete').forEach((btn) => {
+    itemListEl.querySelectorAll('.about-btn-delete').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const judul = btn.closest('.menu-item').querySelector('strong').textContent;
+        const container = btn.closest('[data-id]');
+        if (!container) return;
+        const judulEl = container.querySelector('strong');
+        const judul = judulEl ? judulEl.textContent.trim() : 'data ini';
+        
         if (!confirm(`Yakin ingin menghapus keunggulan "${judul}"?`)) return;
 
         const id = btn.dataset.id;
@@ -274,7 +269,7 @@
         try {
           const { error } = await supabase.from('keunggulan').delete().eq('id', id);
           if (error) throw error;
-          await loadItems(); // <-- reload data, BUKAN window.location.reload()
+          await loadItems();
         } catch (err) {
           alert('Gagal menghapus: ' + err.message);
           btn.innerHTML = originalHTML;
@@ -284,37 +279,37 @@
     });
   }
 
-  // --- Submit (Create / Update) ---
+  // --- Submit (tanpa gambar) ---
   itemForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const judul = document.getElementById('judul').value.trim();
-    const deskripsi = document.getElementById('deskripsi').value.trim();
-    const gambar_url = document.getElementById('gambar_url').value.trim() || null;
-    const urutan = parseInt(document.getElementById('urutan').value, 10);
+    const judul = document.getElementById('about-judul').value.trim();
+    const deskripsi = document.getElementById('about-deskripsi').value.trim();
+    const urutan = parseInt(document.getElementById('about-urutan').value, 10);
 
     if (!judul) {
       setStatus('Judul wajib diisi.', 'error');
-      document.getElementById('judul').focus();
+      document.getElementById('about-judul').focus();
       return;
     }
     if (!deskripsi) {
       setStatus('Deskripsi wajib diisi.', 'error');
-      document.getElementById('deskripsi').focus();
+      document.getElementById('about-deskripsi').focus();
       return;
     }
     if (isNaN(urutan) || urutan < 1) {
       setStatus('Urutan harus angka positif.', 'error');
-      document.getElementById('urutan').focus();
+      document.getElementById('about-urutan').focus();
       return;
     }
 
     setStatus('Menyimpan...', 'loading');
-    submitText.style.display = 'none';
-    submitLoading.style.display = 'inline-flex';
+    submitText.classList.add('hidden');
+    submitLoading.classList.remove('hidden');
+    submitLoading.classList.add('inline-flex');
     btnSubmit.disabled = true;
 
-    const payload = { judul, deskripsi, gambar_url, urutan };
+    const payload = { judul, deskripsi, urutan };
 
     try {
       let error;
@@ -326,505 +321,17 @@
       if (error) throw error;
 
       setStatus('Tersimpan!', 'success');
-      itemForm.classList.remove('open');
-      setTimeout(() => itemForm.classList.add('hidden'), 200);
+      closeForm();
       resetForm();
-      await loadItems(); // <-- reload data dari Supabase, bukan reload halaman
+      await loadItems();
     } catch (err) {
       setStatus('Gagal menyimpan: ' + err.message, 'error');
-      submitText.style.display = 'inline';
-      submitLoading.style.display = 'none';
+      submitText.classList.remove('hidden');
+      submitLoading.classList.add('hidden');
+      submitLoading.classList.remove('inline-flex');
       btnSubmit.disabled = false;
     }
   });
 
-  // --- Initial load saat halaman dibuka ---
   loadItems();
 </script>
-
-<style>
-  /* CARD */
-  .form-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 1.75rem;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.75rem;
-  }
-
-  .header-title {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.85rem;
-  }
-
-  .header-icon {
-    flex-shrink: 0;
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #2563eb, #1e40af);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
-  }
-
-  .form-card h2 {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0.15rem 0 0.25rem 0;
-  }
-
-  .form-hint {
-    color: #64748b;
-    font-size: 0.9rem;
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  .error-banner {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    padding: 0.85rem 1rem;
-    border-radius: 10px;
-    margin-bottom: 1.5rem;
-  }
-  .error-icon {
-    font-size: 1.1rem;
-    line-height: 1.4;
-  }
-  .error-banner p {
-    margin: 0;
-    color: #b91c1c;
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-  .error-hint {
-    font-size: 0.82rem;
-    color: #991b1b !important;
-    margin-top: 0.2rem !important;
-  }
-
-  /* BUTTONS */
-  .btn-primary {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    border: none;
-    color: #fff;
-    padding: 0.65rem 1.4rem;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    white-space: nowrap;
-    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
-  }
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.32);
-  }
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
-  }
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-  .btn-add .plus-icon {
-    font-size: 1.15rem;
-    line-height: 1;
-  }
-
-  .btn-outline {
-    background: transparent;
-    border: 1px solid #d1d9e6;
-    color: #475569;
-    padding: 0.65rem 1.4rem;
-    border-radius: 10px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-  }
-  .btn-outline:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-  }
-
-  .spinner {
-    width: 13px;
-    height: 13px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    display: inline-block;
-    animation: spin 0.7s linear infinite;
-  }
-  .btn-loading {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  /* LIST */
-  .menu-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin: 0 0 1.5rem 0;
-  }
-
-  .menu-item {
-    display: flex;
-    align-items: center;
-    padding: 0.85rem 1rem;
-    background: #fafcff;
-    border-radius: 12px;
-    border: 1px solid #eef2f6;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-    gap: 0.9rem;
-  }
-  .menu-item:hover {
-    background: #f8fafc;
-    border-color: #d9e2ef;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  }
-
-  .menu-item__thumb {
-    flex-shrink: 0;
-    width: 46px;
-    height: 46px;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #eef2f7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .menu-item__thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .thumb-fallback {
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    width: 100%;
-    height: 100%;
-  }
-
-  .menu-item__info {
-    flex: 1;
-    min-width: 150px;
-  }
-
-  .item-header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.55rem;
-    margin-bottom: 0.2rem;
-  }
-  .item-header strong {
-    font-size: 0.98rem;
-    color: #0f172a;
-  }
-
-  .badge-urutan {
-    background: #eef2ff;
-    color: #2563eb;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.15rem 0.6rem;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
-  }
-
-  .item-desc {
-    color: #64748b;
-    font-size: 0.87rem;
-    margin: 0.1rem 0 0 0;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .menu-item__actions {
-    display: flex;
-    gap: 0.4rem;
-    flex-shrink: 0;
-  }
-
-  .btn-edit,
-  .btn-delete {
-    border: none;
-    padding: 0.45rem 0.8rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
-  .btn-edit {
-    color: #2563eb;
-    background: #eff6ff;
-  }
-  .btn-edit:hover {
-    background: #dbeafe;
-  }
-
-  .btn-delete {
-    color: #dc2626;
-    background: #fef2f2;
-  }
-  .btn-delete:hover {
-    background: #fee2e2;
-  }
-  .btn-delete:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 2.75rem 1rem;
-    background: #fafcff;
-    border-radius: 14px;
-    border: 1.5px dashed #d9e2ef;
-  }
-  .empty-icon {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-  }
-  .empty-state p {
-    font-weight: 600;
-    color: #334155;
-    margin: 0 0 0.25rem 0;
-  }
-  .empty-sub {
-    font-size: 0.87rem;
-    color: #94a3b8;
-  }
-
-  /* FORM TOGGLE */
-  .item-form {
-    overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    transform: translateY(-6px);
-    transition: max-height 0.35s ease, opacity 0.25s ease, transform 0.25s ease;
-  }
-  .item-form.hidden {
-    display: none;
-  }
-  .item-form.open {
-    max-height: 900px;
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .form-divider {
-    border: 0;
-    border-top: 2px solid #e9edf4;
-    margin: 0.5rem 0 1.25rem 0;
-  }
-
-  .item-form h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 1.25rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .item-form h3::before {
-    content: "📝";
-    font-size: 1rem;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 1rem;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    margin-bottom: 1.1rem;
-  }
-  .field label {
-    font-weight: 600;
-    font-size: 0.87rem;
-    color: #1e293b;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .field .required {
-    color: #dc2626;
-  }
-  .char-count {
-    font-weight: 500;
-    font-size: 0.75rem;
-    color: #94a3b8;
-  }
-  .char-count--warn {
-    color: #dc2626;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.7rem 0.85rem;
-    border: 1.5px solid #e1e7f0;
-    border-radius: 10px;
-    font-size: 0.93rem;
-    transition: border 0.2s, box-shadow 0.2s;
-    background: #fdfefe;
-    font-family: inherit;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-    background: #fff;
-  }
-  .field textarea {
-    resize: vertical;
-    min-height: 75px;
-  }
-
-  .image-input-row {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-  }
-  .image-input-row input {
-    flex: 1;
-  }
-  .image-preview {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    border: 1.5px dashed #d9e2ef;
-    background: #f8fafc;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    font-size: 1.1rem;
-  }
-  .image-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .field-hint {
-    color: #94a3b8;
-    font-size: 0.78rem;
-    margin-top: 0.15rem;
-  }
-
-  /* STATUS */
-  .status-text {
-    margin: 0.5rem 0 0.25rem 0;
-    font-weight: 500;
-    font-size: 0.88rem;
-    min-height: 0;
-    padding: 0;
-    border-radius: 8px;
-    transition: all 0.2s;
-  }
-  .status-text:empty {
-    display: none;
-  }
-  .status-text.status-error {
-    background: #fef2f2;
-    color: #b91c1c;
-    padding: 0.55rem 0.8rem;
-  }
-  .status-text.status-success {
-    background: #d1fae5;
-    color: #065f46;
-    padding: 0.55rem 0.8rem;
-  }
-  .status-text.status-loading {
-    background: #dbeafe;
-    color: #1e40af;
-    padding: 0.55rem 0.8rem;
-  }
-
-  /* FORM ACTIONS */
-  .form-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  /* RESPONSIVE */
-  @media (max-width: 640px) {
-    .form-card {
-      padding: 1.1rem;
-      border-radius: 12px;
-    }
-    .card-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn-add {
-      justify-content: center;
-      width: 100%;
-    }
-    .form-grid {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-    .menu-item {
-      flex-wrap: wrap;
-    }
-    .menu-item__actions {
-      justify-content: flex-end;
-      width: 100%;
-    }
-    .btn-edit span, .btn-delete span {
-      display: inline;
-    }
-  }
-</style>

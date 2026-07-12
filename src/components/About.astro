@@ -2,123 +2,185 @@
 // =============================================================
 // components/About.astro
 // Section "Tentang Kompetisi" — deskripsi singkat + kartu keunggulan
-// Data diambil dari tabel `keunggulan` di Supabase (build time)
+//
+// Data keunggulan di-fetch client-side dari Supabase.
 // =============================================================
-import { supabase } from '../lib/supabase';
-
-const { data: values, error } = await supabase
-  .from('keunggulan')
-  .select('*')
-  .order('urutan', { ascending: true });
-
-if (error) {
-  console.error('Gagal memuat data keunggulan:', error.message);
-}
-
-const items = values ?? [];
 ---
+
 <section class="about section" id="tentang">
   <div class="container">
     <div class="section-header">
       <span class="section-eyebrow">Tentang Kompetisi</span>
-
       <h2 class="section-title">
         Mengenal Lebih Dekat Kompetisi Kompetensi Akademik
       </h2>
-
       <p class="section-subtitle mx-auto">
         Kompetisi Kompetensi Akademik (KKA) adalah ajang tahunan...
       </p>
     </div>
 
-    <div class="about__grid">
-      {items.map((item, i) => (
-        <div
-          class:list={[
-            "about__card",
-            "card",
-            "reveal",
-            `reveal-delay-${(i % 4) + 1}`,
-          ]}
-        >
-          {item.gambar_url ? (
-            <img
-              src={item.gambar_url}
-              alt={item.judul}
-              class="about__icon-img"
-              loading="lazy"
-            />
-          ) : (
-            <span class="about__icon about__icon--empty" />
-          )}
-          <h3 class="about__card-title">{item.judul}</h3>
-          <p class="about__card-desc">{item.deskripsi}</p>
-        </div>
-      ))}
-    </div>
+    <!-- Loading state -->
+    <p class="about__empty" id="aboutLoading">Memuat data...</p>
 
+    <!-- Empty state -->
+    <p class="about__empty" id="aboutEmpty" style="display:none;">Belum ada data keunggulan.</p>
+
+    <!-- Grid, diisi via JS -->
+    <div class="about__grid" id="aboutGrid" style="display:none;"></div>
   </div>
 </section>
 
+<script type="module">
+  import { supabase } from '../lib/supabase';
+
+  const loadingEl = document.getElementById('aboutLoading');
+  const emptyEl = document.getElementById('aboutEmpty');
+  const gridEl = document.getElementById('aboutGrid');
+
+  // Ikon default berupa SVG lingkaran dengan inisial
+  const defaultIcon = (judul) => {
+    // Ambil huruf pertama untuk inisial
+    const initial = judul.trim().charAt(0).toUpperCase();
+    return `
+      <svg class="about__icon-default" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="28" cy="28" r="28" fill="#EBF0FF"/>
+        <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="24" font-weight="bold" fill="#2563EB" font-family="system-ui, sans-serif">${initial}</text>
+      </svg>
+    `;
+  };
+
+  function renderGrid(items) {
+    // Elemen di-render dengan innerHTML, pastikan style dibungkus :global()
+    gridEl.innerHTML = items.map((item, index) => {
+      // Cek apakah ada gambar_url (jika masih ada di data lama), jika tidak pakai icon default
+      const iconHtml = item.gambar_url
+        ? `<img src="${item.gambar_url}" alt="${item.judul}" class="about__icon-img" loading="lazy" />`
+        : defaultIcon(item.judul);
+
+      return `
+        <div class="about__card card">
+          <div class="about__icon-wrapper">
+            ${iconHtml}
+          </div>
+          <h3 class="about__card-title">${item.judul}</h3>
+          <p class="about__card-desc">${item.deskripsi}</p>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadAbout() {
+    loadingEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+    gridEl.style.display = 'none';
+
+    try {
+      const { data, error } = await supabase
+        .from('keunggulan')
+        .select('*')
+        .order('urutan', { ascending: true });
+
+      if (error) throw error;
+
+      loadingEl.style.display = 'none';
+
+      if (!data || data.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      gridEl.style.display = 'grid';
+      renderGrid(data);
+    } catch (err) {
+      loadingEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'Gagal memuat data keunggulan.';
+      console.error('Gagal fetch keunggulan:', err);
+    }
+  }
+
+  loadAbout();
+</script>
+
 <style>
-  .about__grid {
+  .about__empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 40px 0;
+  }
+
+  /* Grid - harus :global() karena render via innerHTML */
+  :global(.about__grid) {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
   }
 
-  .about__card {
-    padding: 36px 28px;
+  :global(.about__card) {
+    padding: 32px 24px;
     text-align: left;
-  }
-
-  .section-header-image {
-    display: block;
-    width: 100%;
-    max-width: 800px;
-    height: auto;
-    margin: 0 auto 2rem;
+    background: white;
     border-radius: 16px;
-    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(226, 232, 240, 0.6);
   }
 
-  .about__icon,
-  .about__icon-img {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  :global(.about__card:hover) {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+    border-color: #cbd5e1;
+  }
+
+  :global(.about__icon-wrapper) {
+    margin-bottom: 20px;
     width: 56px;
     height: 56px;
-    border-radius: var(--radius-sm);
-    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(37, 99, 235, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .about__icon-img {
+  /* Gambar ikon jika ada */
+  :global(.about__icon-img) {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
   }
 
-  .about__icon--empty {
-    background: rgba(37, 99, 235, 0.08);
+  /* SVG default icon */
+  :global(.about__icon-default) {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 
-  .about__card-title {
-    font-size: 1.15rem;
-    margin-bottom: 10px;
+  :global(.about__card-title) {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+    line-height: 1.3;
   }
 
-  .about__card-desc {
-    color: var(--color-gray);
-    font-size: 0.92rem;
+  :global(.about__card-desc) {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
   }
 
   @media (max-width: 1024px) {
-    .about__grid {
+    :global(.about__grid) {
       grid-template-columns: repeat(2, 1fr);
     }
   }
 
   @media (max-width: 560px) {
-    .about__grid {
+    :global(.about__grid) {
       grid-template-columns: 1fr;
     }
   }

@@ -1,10 +1,29 @@
 ---
 // =============================================================
-// pages/tentang.astro — Halaman Tentang
+// pages/tentang.astro — Halaman Tentang (server-side data)
 // =============================================================
 import MainLayout from '../layouts/MainLayout.astro';
 import About from '../components/About.astro';
 import Contact from '../components/Contact.astro';
+import { createClient } from '@supabase/supabase-js';
+
+// Ambil data keunggulan dari Supabase (server-side)
+let keunggulanItems = [];
+try {
+  const supabase = createClient(
+    import.meta.env.SUPABASE_URL,        // tanpa prefix PUBLIC_
+    import.meta.env.SUPABASE_ANON_KEY     // atau SUPABASE_SERVICE_ROLE_KEY jika perlu bypass RLS
+  );
+  const { data, error } = await supabase
+    .from('keunggulan')
+    .select('id, judul, deskripsi, gambar_url, urutan')
+    .order('urutan', { ascending: true });
+  if (!error && data) {
+    keunggulanItems = data;
+  }
+} catch (err) {
+  console.error('Gagal fetch keunggulan:', err);
+}
 
 const milestones = [
   { year: '2019', desc: 'KKA pertama kali diselenggarakan dengan diikuti 20 sekolah.' },
@@ -24,7 +43,8 @@ const milestones = [
     </div>
   </section>
 
-  <About />
+  <!-- Oper data ke komponen About (server-side rendered) -->
+  <About items={keunggulanItems} />
 
   <section class="section vision">
     <div class="container vision__grid">
