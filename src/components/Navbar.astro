@@ -1,7 +1,7 @@
 ---
 // =============================================================
 // components/Navbar.astro
-// Sticky navbar + dropdown "Informasi" (tanpa Cek Pendaftaran)
+// Sticky navbar + dropdown "Informasi" + tombol "Cek Status"
 // =============================================================
 import { supabase } from "../lib/supabase";
 
@@ -82,6 +82,9 @@ function isActive(href: string) {
     </nav>
 
     <div class="navbar__actions">
+      <button type="button" class="navbar__cek-btn" id="cekStatusBtn">
+        🔍 Cek Status
+      </button>
       <button class="navbar__toggle" id="navbarToggle" aria-label="Buka menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
@@ -89,7 +92,60 @@ function isActive(href: string) {
   </div>
 </header>
 
-<script>
+<!-- ===================== MODAL CEK STATUS ===================== -->
+<div class="cek-modal" id="cekModal">
+  <div class="cek-modal__backdrop" id="cekModalBackdrop"></div>
+
+  <div class="cek-modal__card">
+    <button type="button" class="cek-modal__close" id="cekModalClose" aria-label="Tutup">✕</button>
+
+    <h2 class="cek-modal__title">Cek Status Pendaftaran</h2>
+    <p class="cek-modal__subtitle">Masukkan kode pendaftaran Anda (contoh: KKA-2026-0021)</p>
+
+    <div class="cek-search">
+      <input
+        type="text"
+        id="cekKodeInput"
+        class="cek-search__input"
+        placeholder="KKA-2026-0021"
+        autocomplete="off"
+      />
+      <button type="button" id="cekSearchBtn" class="cek-search__btn">
+        <span class="cek-search__btn-text">Cari</span>
+        <span class="cek-search__btn-loading" style="display:none;">Mencari...</span>
+      </button>
+    </div>
+
+    <p id="cekError" class="cek-error" style="display:none;"></p>
+
+    <div id="cekResult" class="cek-result" style="display:none;">
+      <div class="cek-result__row">
+        <span class="cek-result__label">Nama Siswa</span>
+        <span class="cek-result__value" id="cekResultNama">-</span>
+      </div>
+      <div class="cek-result__row">
+        <span class="cek-result__label">Kode Pendaftaran</span>
+        <span class="cek-result__value" id="cekResultKode">-</span>
+      </div>
+      <div class="cek-result__row">
+        <span class="cek-result__label">Status</span>
+        <span class="cek-result__value">
+          <span id="cekResultStatus" class="cek-status-badge">-</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+
+  // ========== NAVBAR ==========
   const navbar = document.getElementById('navbar');
   const toggle = document.getElementById('navbarToggle');
   const menu = document.getElementById('navbarMenu');
@@ -106,7 +162,6 @@ function isActive(href: string) {
   handleScroll();
   window.addEventListener('scroll', handleScroll, { passive: true });
 
-  // Mobile toggle
   toggle?.addEventListener('click', () => {
     const isOpen = menu?.classList.toggle('is-open');
     toggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
@@ -124,7 +179,6 @@ function isActive(href: string) {
     dropdownToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
   });
 
-  // Tutup dropdown saat klik di luar
   document.addEventListener('click', (e) => {
     if (dropdownItem && !dropdownItem.contains(e.target)) {
       dropdownItem.classList.remove('is-open');
@@ -132,7 +186,6 @@ function isActive(href: string) {
     }
   });
 
-  // Tutup menu mobile & dropdown saat link submenu diklik
   menu?.querySelectorAll('.navbar__dropdown-link').forEach((link) => {
     link.addEventListener('click', () => {
       menu.classList.remove('is-open');
@@ -140,6 +193,115 @@ function isActive(href: string) {
       dropdownItem?.classList.remove('is-open');
       dropdownToggle?.setAttribute('aria-expanded', 'false');
     });
+  });
+
+  // ========== MODAL CEK STATUS ==========
+  const cekBtn = document.getElementById('cekStatusBtn');
+  const modal = document.getElementById('cekModal');
+  const backdrop = document.getElementById('cekModalBackdrop');
+  const closeBtn = document.getElementById('cekModalClose');
+
+  const kodeInput = document.getElementById('cekKodeInput');
+  const searchBtn = document.getElementById('cekSearchBtn');
+  const searchBtnText = searchBtn?.querySelector('.cek-search__btn-text');
+  const searchBtnLoading = searchBtn?.querySelector('.cek-search__btn-loading');
+
+  const cekError = document.getElementById('cekError');
+  const cekResult = document.getElementById('cekResult');
+  const resultNama = document.getElementById('cekResultNama');
+  const resultKode = document.getElementById('cekResultKode');
+  const resultStatus = document.getElementById('cekResultStatus');
+
+  function openModal() {
+    modal?.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => kodeInput?.focus(), 100);
+  }
+
+  function closeModal() {
+    modal?.classList.remove('is-open');
+    document.body.style.overflow = '';
+    resetModal();
+  }
+
+  function resetModal() {
+    if (kodeInput) kodeInput.value = '';
+    if (cekError) cekError.style.display = 'none';
+    if (cekResult) cekResult.style.display = 'none';
+  }
+
+  cekBtn?.addEventListener('click', openModal);
+  backdrop?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.classList.contains('is-open')) closeModal();
+  });
+
+  function statusClass(status) {
+    const map = {
+      'Menunggu Pembayaran': 'cek-status-badge--pending',
+      'Menunggu Verifikasi': 'cek-status-badge--review',
+      'Terverifikasi': 'cek-status-badge--success',
+      'Ditolak': 'cek-status-badge--danger',
+    };
+    return map[status] || 'cek-status-badge--pending';
+  }
+
+  async function cariPendaftaran() {
+    if (!kodeInput || !cekError || !cekResult || !searchBtn) return;
+    const kode = kodeInput.value.trim();
+    cekError.style.display = 'none';
+    cekResult.style.display = 'none';
+
+    if (!kode) {
+      cekError.textContent = 'Masukkan kode pendaftaran terlebih dahulu.';
+      cekError.style.display = 'block';
+      return;
+    }
+
+    if (searchBtnText) searchBtnText.style.display = 'none';
+    if (searchBtnLoading) searchBtnLoading.style.display = 'inline';
+    searchBtn.disabled = true;
+
+    try {
+      const { data, error } = await supabase
+        .from('pendaftar')
+        .select('id, nama_siswa, kode_pendaftaran, status')
+        .ilike('kode_pendaftaran', kode)
+        .maybeSingle();
+
+      if (error) throw new Error(error.message);
+
+      if (!data) {
+        cekError.textContent = 'Kode pendaftaran tidak ditemukan. Periksa kembali penulisannya.';
+        cekError.style.display = 'block';
+        return;
+      }
+
+      if (resultNama) resultNama.textContent = data.nama_siswa || '-';
+      if (resultKode) resultKode.textContent = data.kode_pendaftaran || '-';
+      const statusText = data.status || 'Menunggu Pembayaran';
+      if (resultStatus) {
+        resultStatus.textContent = statusText;
+        resultStatus.className = 'cek-status-badge ' + statusClass(statusText);
+      }
+      cekResult.style.display = 'block';
+    } catch (err) {
+      cekError.textContent = 'Terjadi kesalahan: ' + err.message;
+      cekError.style.display = 'block';
+    } finally {
+      if (searchBtnText) searchBtnText.style.display = 'inline';
+      if (searchBtnLoading) searchBtnLoading.style.display = 'none';
+      searchBtn.disabled = false;
+    }
+  }
+
+  searchBtn?.addEventListener('click', cariPendaftaran);
+  kodeInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      cariPendaftaran();
+    }
   });
 </script>
 
@@ -329,6 +491,26 @@ function isActive(href: string) {
   .navbar__actions {
     display: flex;
     align-items: center;
+    gap: 12px;
+  }
+
+  /* ===== TOMBOL CEK STATUS ===== */
+  .navbar__cek-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+
+  .navbar__cek-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
   }
 
   .navbar__toggle {
@@ -355,10 +537,177 @@ function isActive(href: string) {
     background: var(--color-dark);
   }
 
+  /* ===== MODAL CEK STATUS ===== */
+  .cek-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .cek-modal.is-open {
+    display: flex;
+  }
+  .cek-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+  }
+  .cek-modal__card {
+    position: relative;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 28px;
+    max-width: 460px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    animation: cekModalIn 0.2s ease;
+  }
+  @keyframes cekModalIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .cek-modal__close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #64748b;
+    transition: background 0.2s;
+  }
+  .cek-modal__close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  .cek-modal__title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+  }
+  .cek-modal__subtitle {
+    color: #64748b;
+    font-size: 0.88rem;
+    margin: 0 0 20px 0;
+  }
+
+  .cek-search {
+    display: flex;
+    gap: 10px;
+  }
+  .cek-search__input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  .cek-search__input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
+  }
+  .cek-search__btn {
+    padding: 12px 20px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .cek-search__btn:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+  .cek-search__btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .cek-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-top: 14px;
+  }
+
+  .cek-result {
+    margin-top: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .cek-result__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #edf2f7;
+  }
+  .cek-result__row:last-of-type {
+    border-bottom: none;
+  }
+  .cek-result__label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+  .cek-result__value {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .cek-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .cek-status-badge--pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .cek-status-badge--review {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .cek-status-badge--success {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .cek-status-badge--danger {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
   /* ===== RESPONSIVE (Mobile) ===== */
   @media (max-width: 900px) {
     .navbar__toggle {
       display: flex;
+    }
+
+    .navbar__cek-btn {
+      padding: 8px 12px;
+      font-size: 0.8rem;
     }
 
     .navbar__menu {
