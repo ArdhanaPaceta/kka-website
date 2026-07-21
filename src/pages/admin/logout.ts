@@ -7,7 +7,7 @@ export const GET: APIRoute = async () => {
   return new Response(null, {
     status: 302,
     headers: {
-      Location: "/login",
+      Location: "/admin/login",
     },
   });
 };

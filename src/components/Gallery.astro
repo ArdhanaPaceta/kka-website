@@ -1,271 +1,271 @@
----
-// =============================================================
-// components/Gallery.astro
-// Section "Galeri" — grid gambar dari Supabase dengan lightbox
-// Data di-fetch CLIENT-SIDE supaya selalu update tanpa perlu rebuild
-// =============================================================
----
+  ---
+  // =============================================================
+  // components/Gallery.astro
+  // Section "Galeri" — grid gambar dari Supabase dengan lightbox
+  // Data di-fetch CLIENT-SIDE supaya selalu update tanpa perlu rebuild
+  // =============================================================
+  ---
 
-<section class="gallery section" id="galeri">
-  <div class="container">
-    <div class="section-header reveal">
-      <span class="section-eyebrow">Galeri</span>
-      <h2 class="section-title">Momen Kompetisi Tahun Sebelumnya</h2>
-      <p class="section-subtitle mx-auto">
-        Dokumentasi keseruan dan semangat kompetisi para peserta KKA dari tahun ke tahun.
-      </p>
+  <section class="gallery section" id="galeri">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-eyebrow">Galeri</span>
+        <h2 class="section-title">Momen Kompetisi Tahun Sebelumnya</h2>
+        <p class="section-subtitle mx-auto">
+          Dokumentasi keseruan dan semangat kompetisi para peserta KKA dari tahun ke tahun.
+        </p>
+      </div>
+
+      <!-- Loading state -->
+      <p class="gallery__empty" id="galleryLoading">Memuat galeri...</p>
+
+      <!-- Empty state -->
+      <p class="gallery__empty" id="galleryEmpty" style="display:none;">Belum ada foto di galeri.</p>
+
+      <!-- Grid, diisi via JS -->
+      <div class="gallery__grid" id="galleryGrid" style="display:none;"></div>
     </div>
 
-    <!-- Loading state -->
-    <p class="gallery__empty" id="galleryLoading">Memuat galeri...</p>
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" aria-hidden="true">
+      <button class="lightbox__close" id="lightboxClose" aria-label="Tutup lightbox">&times;</button>
+      <button class="lightbox__nav lightbox__prev" id="lightboxPrev" aria-label="Gambar sebelumnya">&#10094;</button>
+      <img src="" alt="" class="lightbox__image" id="lightboxImage" />
+      <button class="lightbox__nav lightbox__next" id="lightboxNext" aria-label="Gambar berikutnya">&#10095;</button>
+    </div>
+  </section>
 
-    <!-- Empty state -->
-    <p class="gallery__empty" id="galleryEmpty" style="display:none;">Belum ada foto di galeri.</p>
+  <script type="module">
+    import { supabase } from '../lib/supabase';
 
-    <!-- Grid, diisi via JS -->
-    <div class="gallery__grid" id="galleryGrid" style="display:none;"></div>
-  </div>
+    const loadingEl = document.getElementById('galleryLoading');
+    const emptyEl = document.getElementById('galleryEmpty');
+    const gridEl = document.getElementById('galleryGrid');
 
-  <!-- Lightbox -->
-  <div class="lightbox" id="lightbox" aria-hidden="true">
-    <button class="lightbox__close" id="lightboxClose" aria-label="Tutup lightbox">&times;</button>
-    <button class="lightbox__nav lightbox__prev" id="lightboxPrev" aria-label="Gambar sebelumnya">&#10094;</button>
-    <img src="" alt="" class="lightbox__image" id="lightboxImage" />
-    <button class="lightbox__nav lightbox__next" id="lightboxNext" aria-label="Gambar berikutnya">&#10095;</button>
-  </div>
-</section>
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const lightboxPrev = document.getElementById('lightboxPrev');
+    const lightboxNext = document.getElementById('lightboxNext');
 
-<script type="module">
-  import { supabase } from '../lib/supabase';
+    let images = [];
+    let currentIndex = 0;
 
-  const loadingEl = document.getElementById('galleryLoading');
-  const emptyEl = document.getElementById('galleryEmpty');
-  const gridEl = document.getElementById('galleryGrid');
+    function openLightbox(index) {
+      currentIndex = index;
+      lightboxImage.src = images[index].src;
+      lightboxImage.alt = images[index].alt;
+      lightbox.classList.add('is-open');
+      lightbox.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
 
-  const lightbox = document.getElementById('lightbox');
-  const lightboxImage = document.getElementById('lightboxImage');
-  const lightboxClose = document.getElementById('lightboxClose');
-  const lightboxPrev = document.getElementById('lightboxPrev');
-  const lightboxNext = document.getElementById('lightboxNext');
+    function closeLightbox() {
+      lightbox.classList.remove('is-open');
+      lightbox.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
 
-  let images = [];
-  let currentIndex = 0;
+    function showPrev() {
+      currentIndex = (currentIndex - 1 + images.length) % images.length;
+      lightboxImage.src = images[currentIndex].src;
+      lightboxImage.alt = images[currentIndex].alt;
+    }
 
-  function openLightbox(index) {
-    currentIndex = index;
-    lightboxImage.src = images[index].src;
-    lightboxImage.alt = images[index].alt;
-    lightbox.classList.add('is-open');
-    lightbox.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-  }
+    function showNext() {
+      currentIndex = (currentIndex + 1) % images.length;
+      lightboxImage.src = images[currentIndex].src;
+      lightboxImage.alt = images[currentIndex].alt;
+    }
 
-  function closeLightbox() {
-    lightbox.classList.remove('is-open');
-    lightbox.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  }
-
-  function showPrev() {
-    currentIndex = (currentIndex - 1 + images.length) % images.length;
-    lightboxImage.src = images[currentIndex].src;
-    lightboxImage.alt = images[currentIndex].alt;
-  }
-
-  function showNext() {
-    currentIndex = (currentIndex + 1) % images.length;
-    lightboxImage.src = images[currentIndex].src;
-    lightboxImage.alt = images[currentIndex].alt;
-  }
-
-  lightboxClose.addEventListener('click', closeLightbox);
-  lightboxPrev.addEventListener('click', showPrev);
-  lightboxNext.addEventListener('click', showNext);
-  lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) closeLightbox();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (!lightbox.classList.contains('is-open')) return;
-    if (e.key === 'Escape') closeLightbox();
-    if (e.key === 'ArrowLeft') showPrev();
-    if (e.key === 'ArrowRight') showNext();
-  });
-
-  function renderGrid() {
-    // Elemen di sini dibuat lewat innerHTML (bukan template Astro), jadi
-    // TIDAK dapat atribut data-astro-cid dari Astro. Semua CSS yang perlu
-    // kena ke elemen ini WAJIB dibungkus :global(...) di <style> di bawah.
-    gridEl.innerHTML = images.map((img, i) => `
-      <div class="gallery__item" data-index="${i}">
-        <img src="${img.src}" alt="${img.alt}" loading="lazy" />
-      </div>
-    `).join('');
-
-    gridEl.querySelectorAll('.gallery__item').forEach((el) => {
-      el.addEventListener('click', () => {
-        openLightbox(parseInt(el.dataset.index, 10));
-      });
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightboxPrev.addEventListener('click', showPrev);
+    lightboxNext.addEventListener('click', showNext);
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
     });
-  }
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('is-open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') showPrev();
+      if (e.key === 'ArrowRight') showNext();
+    });
 
-  async function loadGallery() {
-    loadingEl.style.display = 'block';
-    emptyEl.style.display = 'none';
-    gridEl.style.display = 'none';
+    function renderGrid() {
+      // Elemen di sini dibuat lewat innerHTML (bukan template Astro), jadi
+      // TIDAK dapat atribut data-astro-cid dari Astro. Semua CSS yang perlu
+      // kena ke elemen ini WAJIB dibungkus :global(...) di <style> di bawah.
+      gridEl.innerHTML = images.map((img, i) => `
+        <div class="gallery__item" data-index="${i}">
+          <img src="${img.src}" alt="${img.alt}" loading="lazy" />
+        </div>
+      `).join('');
 
-    try {
-      const { data: galeri, error } = await supabase
-        .from('galeri')
-        .select('*')
-        .order('created_at', { ascending: false });
+      gridEl.querySelectorAll('.gallery__item').forEach((el) => {
+        el.addEventListener('click', () => {
+          openLightbox(parseInt(el.dataset.index, 10));
+        });
+      });
+    }
 
-      if (error) throw error;
+    async function loadGallery() {
+      loadingEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+      gridEl.style.display = 'none';
 
-      images = (galeri ?? []).map((item) => ({
-        src: item.url_gambar,
-        alt: item.judul_foto || 'Dokumentasi kegiatan KKA',
-      }));
+      try {
+        const { data: galeri, error } = await supabase
+          .from('galeri')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      loadingEl.style.display = 'none';
+        if (error) throw error;
 
-      if (images.length === 0) {
+        images = (galeri ?? []).map((item) => ({
+          src: item.url_gambar,
+          alt: item.judul_foto || 'Dokumentasi kegiatan KKA',
+        }));
+
+        loadingEl.style.display = 'none';
+
+        if (images.length === 0) {
+          emptyEl.style.display = 'block';
+          return;
+        }
+
+        gridEl.style.display = 'grid';
+        renderGrid();
+      } catch (err) {
+        loadingEl.style.display = 'none';
         emptyEl.style.display = 'block';
-        return;
+        emptyEl.textContent = 'Gagal memuat galeri.';
+        console.error('Gagal fetch galeri:', err);
       }
-
-      gridEl.style.display = 'grid';
-      renderGrid();
-    } catch (err) {
-      loadingEl.style.display = 'none';
-      emptyEl.style.display = 'block';
-      emptyEl.textContent = 'Gagal memuat galeri.';
-      console.error('Gagal fetch galeri:', err);
     }
-  }
 
-  loadGallery();
-</script>
+    loadGallery();
+  </script>
 
-<style>
-  /* PENTING: semua selector untuk elemen di dalam #galleryGrid dibungkus
-     :global(...) karena elemen itu di-inject lewat innerHTML, sehingga
-     tidak mendapat atribut scoping otomatis dari Astro. Tanpa :global(),
-     CSS ini tidak akan berlaku sama sekali untuk foto-foto di galeri. */
+  <style>
+    /* PENTING: semua selector untuk elemen di dalam #galleryGrid dibungkus
+      :global(...) karena elemen itu di-inject lewat innerHTML, sehingga
+      tidak mendapat atribut scoping otomatis dari Astro. Tanpa :global(),
+      CSS ini tidak akan berlaku sama sekali untuk foto-foto di galeri. */
 
-  :global(.gallery__grid) {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-  }
-
-  .gallery__empty {
-    text-align: center;
-    color: var(--color-gray);
-    padding: 40px 0;
-  }
-
-  :global(.gallery__item) {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    cursor: pointer;
-  }
-
-  :global(.gallery__item img) {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    transition: transform var(--transition-slow);
-  }
-
-  :global(.gallery__item:hover img) {
-    transform: scale(1.08);
-  }
-
-  @media (max-width: 900px) {
     :global(.gallery__grid) {
-      grid-template-columns: repeat(2, 1fr);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
     }
-  }
 
-  @media (max-width: 500px) {
-    :global(.gallery__grid) {
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+    .gallery__empty {
+      text-align: center;
+      color: var(--color-gray);
+      padding: 40px 0;
     }
-  }
 
-  /* -----------------------------------------------------------
-     Lightbox — elemen ini di-render lewat Astro template (bukan
-     innerHTML), jadi TIDAK perlu :global().
-  ----------------------------------------------------------- */
-  .lightbox {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.94);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1200;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity var(--transition-base);
-  }
+    :global(.gallery__item) {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      cursor: pointer;
+    }
 
-  .lightbox.is-open {
-    opacity: 1;
-    visibility: visible;
-  }
+    :global(.gallery__item img) {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      transition: transform var(--transition-slow);
+    }
 
-  .lightbox__image {
-    max-width: 85vw;
-    max-height: 82vh;
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-lg);
-  }
+    :global(.gallery__item:hover img) {
+      transform: scale(1.08);
+    }
 
-  .lightbox__close {
-    position: absolute;
-    top: 24px;
-    right: 32px;
-    font-size: 2.2rem;
-    color: var(--color-white);
-    line-height: 1;
-  }
+    @media (max-width: 900px) {
+      :global(.gallery__grid) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
 
-  .lightbox__nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.4rem;
-    color: var(--color-white);
-    background: rgba(255, 255, 255, 0.12);
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background var(--transition-fast);
-  }
+    @media (max-width: 500px) {
+      :global(.gallery__grid) {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+    }
 
-  .lightbox__nav:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
+    /* -----------------------------------------------------------
+      Lightbox — elemen ini di-render lewat Astro template (bukan
+      innerHTML), jadi TIDAK perlu :global().
+    ----------------------------------------------------------- */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.94);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1200;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--transition-base);
+    }
 
-  .lightbox__prev { left: 24px; }
-  .lightbox__next { right: 24px; }
+    .lightbox.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
 
-  @media (max-width: 600px) {
+    .lightbox__image {
+      max-width: 85vw;
+      max-height: 82vh;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .lightbox__close {
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      font-size: 2.2rem;
+      color: var(--color-white);
+      line-height: 1;
+    }
+
     .lightbox__nav {
-      width: 40px;
-      height: 40px;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.4rem;
+      color: var(--color-white);
+      background: rgba(255, 255, 255, 0.12);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition-fast);
     }
-    .lightbox__prev { left: 10px; }
-    .lightbox__next { right: 10px; }
-  }
-</style>
+
+    .lightbox__nav:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .lightbox__prev { left: 24px; }
+    .lightbox__next { right: 24px; }
+
+    @media (max-width: 600px) {
+      .lightbox__nav {
+        width: 40px;
+        height: 40px;
+      }
+      .lightbox__prev { left: 10px; }
+      .lightbox__next { right: 10px; }
+    }
+  </style>

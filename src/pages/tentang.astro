@@ -11,8 +11,8 @@ import { createClient } from '@supabase/supabase-js';
 let keunggulanItems = [];
 try {
   const supabase = createClient(
-    import.meta.env.SUPABASE_URL,        // tanpa prefix PUBLIC_
-    import.meta.env.SUPABASE_ANON_KEY     // atau SUPABASE_SERVICE_ROLE_KEY jika perlu bypass RLS
+    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_ANON_KEY
   );
   const { data, error } = await supabase
     .from('keunggulan')
@@ -38,7 +38,7 @@ const milestones = [
   description="Kenali visi, misi, dan sejarah penyelenggaraan Kompetisi Kompetensi Akademik (KKA)."
 >
   <section class="page-hero">
-    <div class="container">
+    <div class="container mx-auto px-4 max-w-6xl">
       <h1 class="page-hero__title">Tentang Kompetisi Kompetensi Akademik</h1>
     </div>
   </section>
@@ -46,39 +46,79 @@ const milestones = [
   <!-- Oper data ke komponen About (server-side rendered) -->
   <About items={keunggulanItems} />
 
-  <section class="section vision">
-    <div class="container vision__grid">
-      <div class="vision__card card reveal">
-        <span class="vision__icon">🎯</span>
-        <h3>Visi</h3>
-        <p>
-          Menjadi wadah kompetisi akademik terdepan yang melahirkan generasi pelajar unggul,
-          berdaya saing, dan berintegritas.
-        </p>
+  <!-- SECTION VISI & MISI -->
+  <!-- Dihapus overflow-hidden dan ditambahkan bg-white agar solid -->
+  <section class="py-16 lg:py-24 bg-white">
+    <div class="container mx-auto max-w-6xl px-4 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      
+      <!-- Kolom Kiri: Gambar & Badge (DIPERBAIKI) -->
+      <!-- MENGGUNAKAN h-[400px] lg:h-[550px] AGAR TINGGI GAMBAR TERKUNCI DAN TIDAK BOCOR -->
+      <div class="relative w-full h-[400px] lg:h-[520px] rounded-2xl shadow-lg reveal">
+        <img 
+          src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+          alt="Gedung Institusi" 
+          class="w-full h-full object-cover rounded-2xl"
+        />
+        <div class="absolute bottom-5 left-5 lg:bottom-8 lg:left-8 bg-[#c93046] text-white p-5 lg:p-7 rounded-xl text-center shadow-2xl">
+          <span class="block text-3xl lg:text-4xl font-extrabold leading-none mb-1 lg:mb-2">60+</span>
+          <span class="block text-[10px] lg:text-xs font-bold tracking-widest uppercase leading-tight">TAHUN<br/>PENGALAMAN</span>
+        </div>
       </div>
-      <div class="vision__card card reveal reveal-delay-1">
-        <span class="vision__icon">🚀</span>
-        <h3>Misi</h3>
-        <p>
-          Menyelenggarakan kompetisi yang adil dan mendidik, mendorong budaya belajar aktif, serta
-          memperluas akses kompetisi bagi pelajar di seluruh kabupaten.
-        </p>
+
+      <!-- Kolom Kanan: Teks & Kartu -->
+      <div class="flex flex-col reveal reveal-delay-1">
+        
+        <!-- Header -->
+        <div class="mb-8 lg:mb-10">
+          <div class="flex items-center text-[#c93046] font-bold text-sm tracking-[0.15em] uppercase mb-4">
+            <span class="w-10 h-0.5 bg-[#c93046] mr-3"></span>
+            TENTANG KAMI
+          </div>
+          <h2 class="text-3xl lg:text-4xl font-bold text-[#1a2b4c] leading-tight mb-5 lg:mb-6">
+            Membentuk Masa Depan Melalui Pengetahuan & Penemuan
+          </h2>
+          <p class="text-slate-500 leading-relaxed text-sm lg:text-base">
+            Kompetisi Kompetensi Akademik (KKA) berdedikasi untuk memberikan wadah terbaik bagi para pelajar. 
+            Kami percaya bahwa iklim kompetisi yang sehat akan memicu semangat belajar dan melahirkan generasi muda yang siap menghadapi tantangan global.
+          </p>
+        </div>
+
+        <!-- Kartu Visi Misi -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div class="bg-white rounded-xl p-6 lg:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-[3px] border-[#c93046] hover:-translate-y-1 transition-transform duration-300 flex flex-col">
+            <span class="inline-flex items-center justify-center w-12 h-12 text-[#c93046] bg-[#c93046]/5 rounded-full mb-4 text-xl lg:text-2xl shrink-0">
+              🎯
+            </span>
+            <h3 class="text-lg lg:text-xl font-bold text-[#1a2b4c] mb-2 lg:mb-3">Misi Kami</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">Menyelenggarakan kompetisi yang adil dan mendidik, mendorong budaya belajar aktif, serta memperluas akses kompetisi bagi pelajar di seluruh kabupaten.</p>
+          </div>
+          
+          <div class="bg-white rounded-xl p-6 lg:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-[3px] border-[#c93046] hover:-translate-y-1 transition-transform duration-300 flex flex-col">
+            <span class="inline-flex items-center justify-center w-12 h-12 text-[#c93046] bg-[#c93046]/5 rounded-full mb-4 text-xl lg:text-2xl shrink-0">
+              👁️
+            </span>
+            <h3 class="text-lg lg:text-xl font-bold text-[#1a2b4c] mb-2 lg:mb-3">Visi Kami</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">Menjadi wadah kompetisi akademik terdepan yang melahirkan generasi pelajar unggul, berdaya saing, dan berintegritas tinggi.</p>
+          </div>
+        </div>
       </div>
+
     </div>
   </section>
 
-  <section class="section milestones">
-    <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Perjalanan Kami</span>
-        <h2 class="section-title">Sejarah Singkat KKA</h2>
+  <!-- Ditambahkan border-t transparan/bg agar benar-benar terpisah dari section atas -->
+  <section class="py-16 lg:py-24 bg-slate-50 border-t border-slate-100">
+    <div class="container mx-auto max-w-6xl px-4">
+      <div class="mb-10 lg:mb-14 text-center reveal">
+        <span class="text-[#c93046] font-bold text-xs lg:text-sm tracking-widest uppercase block mb-2 lg:mb-3">Perjalanan Kami</span>
+        <h2 class="text-2xl lg:text-3xl font-bold text-[#1a2b4c]">Sejarah Singkat KKA</h2>
       </div>
 
-      <div class="milestones__grid">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {milestones.map((m, i) => (
-          <div class:list={['milestones__item', 'card', 'reveal', `reveal-delay-${i + 1}`]}>
-            <span class="milestones__year">{m.year}</span>
-            <p>{m.desc}</p>
+          <div class:list={['bg-white p-6 lg:p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow reveal', `reveal-delay-${i + 1}`]}>
+            <span class="block text-2xl lg:text-3xl font-bold text-[#1a2b4c] mb-2 lg:mb-3">{m.year}</span>
+            <p class="text-slate-500 text-sm leading-relaxed">{m.desc}</p>
           </div>
         ))}
       </div>
@@ -87,78 +127,3 @@ const milestones = [
 
   <Contact />
 </MainLayout>
-
-<style>
-  .vision__grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 28px;
-  }
-
-  .vision__card {
-    padding: 40px;
-  }
-
-  .vision__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
-    font-size: 1.6rem;
-    background: rgba(30, 58, 138, 0.08);
-    border-radius: var(--radius-sm);
-    margin-bottom: 20px;
-  }
-
-  .vision__card h3 {
-    font-size: 1.25rem;
-    margin-bottom: 12px;
-  }
-
-  .vision__card p {
-    color: var(--color-gray);
-  }
-
-  .milestones {
-    background: var(--color-light);
-  }
-
-  .milestones__grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-  }
-
-  .milestones__item {
-    padding: 28px 24px;
-    background: var(--color-white);
-  }
-
-  .milestones__year {
-    display: inline-block;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--color-secondary);
-    margin-bottom: 10px;
-  }
-
-  .milestones__item p {
-    color: var(--color-gray);
-    font-size: 0.9rem;
-  }
-
-  @media (max-width: 900px) {
-    .vision__grid,
-    .milestones__grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .vision__grid,
-    .milestones__grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>

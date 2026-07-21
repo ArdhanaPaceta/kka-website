@@ -100,7 +100,7 @@ const currentPath = Astro.url.pathname;
         const admin = await authService.getAdmin();
 
         if (!admin) {
-          window.location.replace("/login");
+          window.location.replace("/admin/login");
           return;
         }
 
@@ -125,7 +125,7 @@ const currentPath = Astro.url.pathname;
         ?.addEventListener("click", async (e) => {
           e.preventDefault();
           await authService.logout();
-          window.location.replace("/login");
+          window.location.replace("/admin/login");
         });
 
       const sidebarToggle = document.getElementById("sidebarToggle");

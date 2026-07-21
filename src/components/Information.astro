@@ -59,13 +59,6 @@
   }
 
   function renderGrid(items) {
-    // CATATAN: class "reveal"/"reveal-delay-X" SENGAJA tidak dipakai di sini.
-    // Elemen ini muncul async setelah fetch selesai, sehingga
-    // IntersectionObserver scroll-animation global (yang hanya observe
-    // elemen yang ada saat DOMContentLoaded) tidak pernah "melihat" elemen
-    // ini -> opacity tetap 0 selamanya walau datanya ada. Menghapus class
-    // ini di sumbernya jauh lebih sederhana & stabil dibanding menambal
-    // dengan fallback ScrollReveal.sync() atau setTimeout manual.
     gridEl.innerHTML = items.map((card) => `
       <div class="information__card card">
         <span class="information__icon">${escapeHtml(card.icon) || '📄'}</span>
@@ -115,60 +108,275 @@
 </script>
 
 <style>
-  /* PENTING: elemen di dalam #infoGrid dibuat lewat innerHTML, jadi TIDAK
-     mendapat atribut scoping otomatis dari Astro. Semua selector untuk
-     elemen tersebut WAJIB dibungkus :global(...) supaya CSS ini benar-benar
-     berlaku, kalau tidak kartu informasi akan tampil polos tanpa styling. */
+  /* ============================================
+     SECTION WRAPPER
+     ============================================ */
+  .information {
+    padding: 80px 0 100px;
+    background: #f8faff;
+  }
 
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ============================================
+     SECTION HEADER (sama seperti sebelumnya)
+     ============================================ */
+  .section-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .section-eyebrow {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #ffc107;
+    background: rgba(255, 193, 7, 0.15);
+    padding: 6px 18px;
+    border-radius: 30px;
+    margin-bottom: 15px;
+  }
+
+  .section-title {
+    font-size: 38px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+  }
+
+  .section-subtitle {
+    font-size: 18px;
+    color: #555;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ============================================
+     GRID (container untuk card)
+     ============================================ */
   :global(.information__grid) {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    gap: 30px;
   }
 
+  /* ============================================
+     CARD INDIVIDUAL
+     ============================================ */
+  :global(.information__card) {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 30px 24px 32px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.3s;
+    border: 1px solid #f0f2f6;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+    /* Animasi fade-in saat muncul */
+    animation: fadeUp 0.6s ease backwards;
+  }
+
+  /* Efek hover */
+  :global(.information__card:hover) {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+    border-color: #ffc107;
+  }
+
+  /* Garis aksen di atas card (opsional) */
+  :global(.information__card::before) {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 4px;
+    background: linear-gradient(90deg, #ffc107, #f5a623);
+    border-radius: 0 0 4px 4px;
+    transition: left 0.3s, right 0.3s;
+  }
+
+  :global(.information__card:hover::before) {
+    left: 0;
+    right: 0;
+  }
+
+  /* ============================================
+     ICON
+     ============================================ */
+  :global(.information__icon) {
+    font-size: 2.6rem;
+    line-height: 1;
+    display: block;
+    margin-bottom: 4px;
+    transition: transform 0.3s;
+  }
+
+  :global(.information__card:hover .information__icon) {
+    transform: scale(1.1) rotate(-3deg);
+  }
+
+  /* ============================================
+     LABEL
+     ============================================ */
+  :global(.information__label) {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  /* ============================================
+     LIST ITEMS
+     ============================================ */
+  :global(.information__list) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  :global(.information__list li) {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.5;
+    padding-left: 26px;
+    position: relative;
+  }
+
+  /* Custom bullet menggunakan ikon centang (atau tanda panah) */
+  :global(.information__list li::before) {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: #ffc107;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  /* ============================================
+     EMPTY, LOADING, ERROR
+     ============================================ */
   .information__empty {
     text-align: center;
-    color: var(--color-gray);
-    padding: 40px 0;
+    color: #777;
+    padding: 60px 0;
   }
 
-  :global(.information__card) {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  :global(.information__icon) {
-    font-size: 1.8rem;
-  }
-
-  :global(.information__label) {
-    font-size: 1.05rem;
-  }
-
-  :global(.information__list) {
-    padding-left: 18px;
-    color: var(--color-gray);
-    font-size: 0.9rem;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
+  /* ============================================
+     CTA BUTTON
+     ============================================ */
   .information__cta {
     text-align: center;
-    margin-top: 40px;
+    margin-top: 50px;
   }
 
-  @media (max-width: 900px) {
-    :global(.information__grid) {
-      grid-template-columns: repeat(2, 1fr);
+  .information__cta .btn {
+    display: inline-block;
+    padding: 12px 36px;
+    font-weight: 600;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: background 0.3s, transform 0.3s;
+    background: #1a1a2e;
+    color: #fff;
+    border: 2px solid #1a1a2e;
+  }
+
+  .information__cta .btn:hover {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #1a1a2e;
+    transform: scale(1.02);
+  }
+
+  /* ============================================
+     ANIMASI FADE UP
+     ============================================ */
+  @keyframes fadeUp {
+    0% {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
-  @media (max-width: 500px) {
+  /* Tiap card delay berbeda (hanya jika ingin, kita set melalui nth-child) */
+  :global(.information__card:nth-child(1)) { animation-delay: 0.05s; }
+  :global(.information__card:nth-child(2)) { animation-delay: 0.12s; }
+  :global(.information__card:nth-child(3)) { animation-delay: 0.19s; }
+  :global(.information__card:nth-child(4)) { animation-delay: 0.26s; }
+  :global(.information__card:nth-child(5)) { animation-delay: 0.33s; }
+  :global(.information__card:nth-child(6)) { animation-delay: 0.40s; }
+  :global(.information__card:nth-child(7)) { animation-delay: 0.47s; }
+  :global(.information__card:nth-child(8)) { animation-delay: 0.54s; }
+
+  /* ============================================
+     RESPONSIVE
+     ============================================ */
+  @media (max-width: 992px) {
+    :global(.information__grid) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .information {
+      padding: 60px 0 70px;
+    }
+
+    .section-title {
+      font-size: 30px;
+    }
+
+    .section-subtitle {
+      font-size: 16px;
+    }
+
     :global(.information__grid) {
       grid-template-columns: 1fr;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    :global(.information__card) {
+      padding: 24px 20px 28px;
+    }
+
+    :global(.information__icon) {
+      font-size: 2.2rem;
+    }
+
+    :global(.information__label) {
+      font-size: 1.05rem;
+    }
+
+    :global(.information__list li) {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    :global(.information__card) {
+      padding: 20px 16px 24px;
     }
   }
 </style>
